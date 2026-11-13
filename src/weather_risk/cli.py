@@ -9,7 +9,7 @@ from enum import StrEnum
 import typer
 
 from weather_risk.data.refresh import fetch_all
-from weather_risk.hubs import Region
+from weather_risk.hubs import Region, load_hubs
 from weather_risk.scoring.engine import METRICS, Engine, UnknownHub, parse_metric
 from weather_risk.settings import get_settings
 
@@ -163,6 +163,65 @@ def serve(
 
     typer.echo(f"Chat page: http://{'localhost' if host in ('127.0.0.1', '0.0.0.0') else host}:{port}")
     uvicorn.run("weather_risk.api.app:app", host=host, port=port)
+
+
+# ---------- risk-change alerts (spec 002, contracts/cli.md) ----------
+
+alerts_app = typer.Typer(no_args_is_help=True, help="Risk-change alerts: check, demo, list.")
+app.add_typer(alerts_app, name="alerts")
+
+
+def _alert_line(a: dict) -> str:
+    tag = "[demo] " if a["is_demo"] else ""
+    name = a.get("hub_name", a["hub_id"])
+    return (f"{tag}{name:<16} {a['metric']:<14} {a['old_value']:5.1f} -> {a['new_value']:5.1f}  "
+            f"({a['change']:+.1f})   {a['delivery_status']}"
+            + (f" ({a['delivery_error']})" if a.get("delivery_error") else ""))
+
+
+def _print_summary(s) -> None:
+    label = "Demo check" if s.kind == "demo" else f"Check ({s.kind})"
+    note = ", baseline recorded" if s.baseline else ""
+    typer.echo(f"{label} #{s.check_id}: {s.status}, {s.hubs_checked} hubs, {s.alerts_raised} alerts"
+               f" (threshold {get_settings().alert_threshold}){note}")
+    if s.fetch_failures:
+        typer.echo("fetch failures (previous data kept): " + ", ".join(s.fetch_failures))
+    for a in s.alerts:
+        typer.echo(_alert_line(a))
+
+
+@alerts_app.command("check")
+def alerts_check() -> None:
+    """Run a real check now: fetch live data into DATA_DIR, recompute, compare, alert."""
+    import logging
+
+    from weather_risk.alerts import service
+
+    logging.basicConfig(level=logging.INFO, format="%(message)s")  # show fetch progress
+    summary = service.run_check("manual")
+    _print_summary(summary)
+    if summary.status != "ok" or summary.fetch_failures:
+        raise typer.Exit(code=2)
+
+
+@alerts_app.command("list")
+def alerts_list(limit: int = typer.Option(20, min=1, max=50, help="How many alerts to show.")) -> None:
+    """Show the last check and the newest alerts. No LLM, no network."""
+    from weather_risk.alerts.history import History
+
+    history = History(get_settings().alerts_db)
+    last = history.last_check()
+    if last is None:
+        typer.echo("No checks yet.")
+    else:
+        typer.echo(f"Last check #{last['id']} ({last['kind']}) at {last['started_at']}: {last['status']}, "
+                   f"{last['hubs_checked']} hubs, {last['alerts_raised']} alerts")
+    names = {h.id: h.name for h in load_hubs()}
+    alerts = history.list_alerts(limit)
+    typer.echo(f"{len(alerts)} recent alerts" + (":" if alerts else "."))
+    for a in alerts:
+        named = {**a, "hub_name": names.get(a["hub_id"], a["hub_id"])}
+        typer.echo(f"{a['detected_at']}  " + _alert_line(named))
 
 
 if __name__ == "__main__":

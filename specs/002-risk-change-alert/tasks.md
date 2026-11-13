@@ -84,7 +84,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
   - no webhook configured gives `not_configured`;
   - an unreachable webhook still completes the check, with `failed` recorded (SC-204);
   - a concurrent call raises `CheckBusy`.
-- [ ] T212 [US1] Add `wra alerts check` and `wra alerts list [--limit N]` to `src/weather_risk/cli.py` (a Typer sub-app), with output and exit codes as in contracts/cli.md. Add a smoke test in `tests/smoke/test_cli_alerts.py` with the fake fetch.
+- [X] T212 [US1] Add `wra alerts check` and `wra alerts list [--limit N]` to `src/weather_risk/cli.py` (a Typer sub-app), with output and exit codes as in contracts/cli.md. Add a smoke test in `tests/smoke/test_cli_alerts.py` with the fake fetch.
 - [ ] T213 [US1] Implement `src/weather_risk/alerts/scheduler.py`: `async def run_scheduler(settings, poll_seconds=600)`, which loops forever. On each tick, if `is_due(...)` is true, it runs `await asyncio.to_thread(run_check, "scheduled", ...)`. It catches and logs `CheckBusy` and any exception, so the loop never dies. Wire it into a FastAPI `lifespan` in `src/weather_risk/api/app.py`, started only when `alert_interval_hours > 0` and cancelled on shutdown. Add a smoke test in `tests/smoke/test_scheduler.py` (a short poll, a monkeypatched `run_check`, and a check that it runs once when due and not when not due).
 
 **Checkpoint**: `wra alerts check` works locally; the first run is a baseline.

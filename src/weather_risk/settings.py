@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     alert_threshold: float = Field(2.0, gt=0)
     alert_webhook_url: SecretStr | None = None
     alert_admin_token: SecretStr | None = None
+
+    @field_validator("alert_webhook_url", "alert_admin_token", mode="before")
+    @classmethod
+    def _blank_is_unset(cls, value):
+        # An empty variable (e.g. ALERT_WEBHOOK_URL= in .env) means "not configured".
+        return None if isinstance(value, str) and not value.strip() else value
 
     @property
     def alerts_db(self) -> Path:

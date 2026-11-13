@@ -88,3 +88,10 @@ def test_demo_on_real_scores_gives_exactly_two_alerts(seed_engine):
     changes = detect_changes(simulate_previous(current), current, 2.0)
     assert [(c.hub_id, c.metric, c.change) for c in changes] == [
         ("dallas", "heat", 7.5), ("houston", "hurricane", -5.0)]
+
+
+def test_blank_alert_secrets_mean_not_configured():
+    from weather_risk.settings import Settings
+
+    s = Settings(alert_webhook_url="  ", alert_admin_token="")
+    assert s.alert_webhook_url is None and s.alert_admin_token is None

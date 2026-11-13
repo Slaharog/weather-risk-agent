@@ -45,13 +45,14 @@ def _now() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def run_check(kind: str = "manual", settings: Settings | None = None, fetch=fetch_all,
+def run_check(kind: str = "manual", settings: Settings | None = None, fetch=None,
               engine_factory: Callable[[], Engine] = Engine.from_settings,
               client: httpx.Client | None = None) -> CheckSummary:
     """A real check: `kind` is "scheduled" or "manual". Fetches live data into DATA_DIR first."""
     if kind not in ("scheduled", "manual"):
         raise ValueError("kind must be 'scheduled' or 'manual'; use run_demo for the demo")
-    return _run(kind, settings or get_settings(), fetch, engine_factory, client)
+    # fetch_all is looked up at call time, so tests can replace it on this module.
+    return _run(kind, settings or get_settings(), fetch or fetch_all, engine_factory, client)
 
 
 def run_demo(settings: Settings | None = None,
