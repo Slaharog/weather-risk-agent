@@ -141,3 +141,11 @@ Two read-only review agents ran on the finished alert code: a security reviewer 
 - **The demo could show fewer than 2 alerts:** clamping to 0-100 could hide a shift (Dallas heat near 0 in winter). A shift that would leave the scale is now applied in the other direction.
 - **`is_due` borrowed the caller's timezone.** Stored times are UTC, and it now says so explicitly.
 - **Documentation corrected:** two overlapping check processes could deliver the same alerts twice, not merely run "two baseline-equivalent checks" as research.md first said.
+
+## 2026-11-13 - Spec 003 (voice input)
+
+- **Browser speech recognition, not a server speech service.** Zero server code and cost, and the text is reviewed before sending. Honest caveat: Chrome and Edge send the audio to the vendor's cloud recognizer, which the page and README state. Rejected: an OpenAI transcription endpoint (a new audio upload surface and cost for a bonus feature), and in-browser Whisper (too heavy for one static page).
+- **Clarifications (user):** hide the button with a one-line note in unsupported browsers (a disabled control is easy to miss and invites clicks); show live partial words; append to typed text, never replace it.
+- **Never auto-send.** Only the Send button sends. Pressing Send mid-dictation *aborts* the recognizer, which discards its results; stopping it instead could deliver a late final result into the cleared box.
+- **Testability:** all logic is in `initVoice(Recognition)`, so a scripted Chrome check drove it with a fake recognizer (live text, append, toggle, errors, fallback, no auto-send). A real-microphone try is left to the user on the https deployment.
+- **No speckit-analyze round** for this feature, at the user's direction under the deadline: it is one file and six tasks.

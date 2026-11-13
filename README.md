@@ -6,6 +6,7 @@ An AI agent that helps logistics analysts decide which US distribution hubs are 
 - **Conversational agent.** An OpenAI model answers questions in plain language. It uses five read-only tools that call the engine, and returns a strict JSON answer.
 - **One FastAPI service** serves the chat page, the agent API, and LLM-free ranking endpoints.
 - **Evals.** A 20-case eval set runs with one command. The latest result is 20/20 on `gpt-6.1-sol` (details in [Evaluation](#evaluation)).
+- **Voice input (bonus).** A "Voice" button on the chat page lets you speak a question; the text appears in the box for review before you send it (details in [Voice input](#voice-input)).
 - **Risk-change alerts (bonus).** A scheduled job re-fetches the data, recomputes every score, and alerts when a hub's score moves by at least 2 points. Alerts go to a webhook and are listed on a read-only page (details in [Risk-change alerts](#risk-change-alerts)).
 
 **Live demo:** https://weather-risk-agent-production.up.railway.app (chat), [`/alerts`](https://weather-risk-agent-production.up.railway.app/alerts) (alert list), [`/docs`](https://weather-risk-agent-production.up.railway.app/docs) (API). It is deployed on Railway as one container with a volume.
@@ -17,7 +18,7 @@ What percentage of days in Denver last year had snowfall?          -> get_weathe
 Why is the Dallas hub's weather disruption risk high?              -> get_hub_breakdown(dallas)
 ```
 
-Design document: [`docs/architecture.md`](docs/architecture.md). Decision log with every trade-off: [`docs/decisions.md`](docs/decisions.md). Specs, plans and tasks: [`specs/001-core-risk-agent/`](specs/001-core-risk-agent/), [`specs/002-risk-change-alert/`](specs/002-risk-change-alert/). AI session log: [`docs/session/`](docs/session/).
+Design document: [`docs/architecture.md`](docs/architecture.md). Decision log with every trade-off: [`docs/decisions.md`](docs/decisions.md). Specs, plans and tasks: [`specs/001-core-risk-agent/`](specs/001-core-risk-agent/), [`specs/002-risk-change-alert/`](specs/002-risk-change-alert/), [`specs/003-voice-input/`](specs/003-voice-input/). AI session log: [`docs/session/`](docs/session/).
 
 ---
 
@@ -174,6 +175,24 @@ uv run python scripts/alert_demo.py https://weather-risk-agent-production.up.rai
 | `ALERT_THRESHOLD` | `2.0` | `2.0` |
 | `ALERT_WEBHOOK_URL` | unset (recorded and logged only) | a webhook.site URL |
 | `ALERT_ADMIN_TOKEN` | unset (trigger endpoints disabled) | a random 43-character token |
+
+---
+
+## Voice input
+
+Spec, plan and tasks: [`specs/003-voice-input/`](specs/003-voice-input/).
+
+**How to use it.**
+1. Press **Voice** next to the message box and speak. The label changes to **Stop**, and screen readers hear "Listening…".
+2. Words appear in the box as you speak. They are added after anything you already typed.
+3. Listening stops when you pause, or when you press **Stop**.
+4. Check or fix the text, then press **Send**. Voice never sends anything on its own. If you press Send while it is still listening, dictation is cancelled, so a late result cannot refill the box.
+
+**Browsers.** It uses the browser's built-in speech recognition, which Chrome, Edge and Safari support. In Firefox the button is hidden and a one-line note says to type instead. A blocked microphone, silence, or a network error each show a short message, and your text is kept.
+
+**Privacy.** The app receives only the text you send. In Chrome and Edge, however, the browser itself sends the audio to its vendor's cloud speech service (Google or Microsoft) to recognize it, and the page says so in one line under the box. It needs https or localhost, which the deployed site has.
+
+**How it was tested without a microphone.** All the logic is one function, `initVoice(Recognition)`. A scripted browser check passed it a fake recognizer and fired its events. That verified live text, appending, the toggle, error messages, the unsupported fallback, and that only the Send button calls `/api/chat`. A pytest smoke test checks the markup, and that the voice code contains no submit call.
 
 ---
 

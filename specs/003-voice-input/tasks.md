@@ -42,7 +42,7 @@ Both stories live in the same function and file, so they are built together.
 
 ## Phase 2: Polish
 
-- [ ] T306 Full `pytest`, `ruff`, and `wra eval` (20/20 expected; the chat API is unchanged). Add a README "Voice input" section: how it works, supported browsers, and the privacy line. Add a `docs/decisions.md` entry.
+- [X] T306 Full `pytest`, `ruff`, and `wra eval` (20/20 expected; the chat API is unchanged). Add a README "Voice input" section: how it works, supported browsers, and the privacy line. Add a `docs/decisions.md` entry.
 
 ## Dependencies
 
