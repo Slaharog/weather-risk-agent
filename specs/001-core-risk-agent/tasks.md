@@ -43,9 +43,9 @@ Single project: `src/weather_risk/`, `tests/`, `evals/`, `config/`, `data/` at r
 
 **⚠️ CRITICAL**: no user story work begins until this phase is complete.
 
-- [ ] T006 Create `config/hubs.toml` with the 16 hubs from data-model §1 (fields `id`, `name`, `city`, `state`, `lat`, `lon`, `county_fips`, `timezone`) and the state→region map (US Census regions: Midwest, South, West, Northeast)
-- [ ] T007 TDD: write `tests/unit/test_hubs.py`: exactly 16 hubs; unique ids; `county_fips` is 5 digits; region is derived from `state`, never typed by hand; Midwest = chicago, indianapolis, columbus, minneapolis, kansas-city, st-louis, detroit
-- [ ] T008 Implement `src/weather_risk/hubs.py`: `Hub` and `Region` models, `load_hubs()` reading `config/hubs.toml` with `tomllib`, `hubs_in_region(region)`
+- [X] T006 Create `config/hubs.toml` with the 16 hubs from data-model §1 (fields `id`, `name`, `city`, `state`, `lat`, `lon`, `county_fips`, `timezone`) and the state→region map (US Census regions: Midwest, South, West, Northeast)
+- [X] T007 TDD: write `tests/unit/test_hubs.py`: exactly 16 hubs; unique ids; `county_fips` is 5 digits; region is derived from `state`, never typed by hand; Midwest = chicago, indianapolis, columbus, minneapolis, kansas-city, st-louis, detroit
+- [X] T008 Implement `src/weather_risk/hubs.py`: `Hub` and `Region` models, `load_hubs()` reading `config/hubs.toml` with `tomllib`, `hubs_in_region(region)`
 - [ ] T009 [P] Implement data models in `src/weather_risk/data/models.py` per data-model §2: `DailyWeather` (`date`, `snowfall_cm`, `precipitation_mm`, `tmax_c`, `tmin_c`, `gust_max_kmh`, each `float | None`), `WeatherDataset` (`hub_id`, `source`, `start_date`, `end_date`, `retrieved_at`, `days`), `NriCounty` (`fips`, `county`, `state`, `afreq: dict[str, float | None]` for exactly `HRCN, IFLD, CFLD, WNTW, ISTM, CWAV, HWAV, TRND, HAIL, SWND`), `NriDataset` (`source`, `version`, `retrieved_at`, `counties`)
 - [ ] T010 [P] Create small real-shaped fixtures `tests/fixtures/open_meteo_sample.json` (5 days, including one null value) and `tests/fixtures/nri_page_sample.json` (3 counties, one with null `HRCN_AFREQ`)
 - [ ] T011 TDD: write `tests/unit/test_sources_parse.py`: Open-Meteo fixture parses into `WeatherDataset` with nulls kept as `None`; NRI fixture parses into `NriCounty` with null `_AFREQ` kept as `None`, the `IFLD` column (not `RFLD`) is read, and `NRI_VER` becomes `NriDataset.version`
