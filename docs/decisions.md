@@ -75,3 +75,12 @@ Each entry records what was chosen, the alternatives considered, and why.
 - **Alternatives:** keep percentile rank (simple wording, misleading magnitudes); percentile among exposed counties only (Dallas 30.8, still loses magnitude).
 - **Not a test-fitting change:** all five plausibility tests passed both before and after; the change fixes magnitude, which those tests do not measure.
 - **Effect on overall ranking:** Houston 48.4, Dallas 46.0, Miami 41.4 lead; Dallas no longer gets an inflated hurricane component.
+
+## 2026-11-13 - Eval results (feature 001)
+
+- **gpt-6.1-sol (default): 20/20 twice in a row.** 0 table mismatches, 0 ungrounded narrative numbers; p50 about 6.5 s, p95 about 15 s; about 93k input / 4k output tokens for the whole set (44 model calls). Optional LLM judge (reported separately): clarity 4.9/5. Results: `evals/results/20261113T115806Z.json`, `20261113T120140Z.json`.
+- **No prompt iteration was needed.** The first prompt passed. To check the evals are not simply too easy, the same set was run on the cheaper `gpt-6-luna`: 18/20 (`evals/results/20261113T120435Z.json`), so the checks do discriminate between models.
+- **One eval fix, not a prompt fix:** Luna's earthquake refusal ("Earthquake exposure is not among the hazards this system scores") was correct but missed my substring list. I widened the accepted phrasings; both models then pass that case, so Luna is effectively 19/20.
+- **Remaining Luna failure is real per the spec:** on an ambiguous "that one" it answered for both hubs instead of asking a clarifying question. Reasonable, but the spec (US5 scenario 2) asks for clarification. Sol asks.
+- **Model choice stays gpt-6.1-sol:** Luna is faster at the median (4.6 s) but had one 65 s outlier (p95) and misses the clarification behavior. Evidence-based model choice is the interview answer to "why this model?".
+- **Known limit of the evals:** 20 hand-written cases, single run each; substring checks for refusals can miss valid phrasings (as seen). A larger, paraphrased set is the first thing to grow.

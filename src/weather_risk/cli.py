@@ -162,6 +162,19 @@ def stat(
     _print_sources(engine)
 
 
+@app.command(name="eval")
+def eval_(
+    model: str | None = typer.Option(None, help="Override OPENAI_MODEL for this run."),
+    case: str | None = typer.Option(None, help="Run only this case id."),
+    judge: bool = typer.Option(False, help="Add an LLM clarity score, reported separately."),
+) -> None:
+    """Run the eval set (evals/cases.yaml) against the live agent and report pass rates."""
+    from evals.run import run
+
+    summary = run(model=model, case_id=case, judge=judge)
+    raise typer.Exit(code=0 if summary["passed"] == summary["cases"] else 1)
+
+
 @app.command()
 def serve(
     port: int = typer.Option(8000, envvar="PORT", help="Port (Railway sets PORT)."),

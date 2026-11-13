@@ -77,6 +77,24 @@ class OpenAILlm:
         except openai.OpenAIError as exc:
             raise LlmUnavailable(f"{type(exc).__name__}: {str(exc)[:200]}") from exc
 
+        return self._turn(r)
+
+    def complete_json(self, instructions: str, text: str, name: str, schema: dict) -> dict:
+        """One-shot strict-JSON completion with no tools (used by the optional eval judge)."""
+        import openai
+
+        try:
+            r = self.client.responses.create(
+                model=self.model, instructions=instructions, input=text, store=False,
+                text={"format": {"type": "json_schema", "name": name, "strict": True,
+                                 "schema": schema}},
+                reasoning={"effort": self.effort})
+        except openai.OpenAIError as exc:
+            raise LlmUnavailable(f"{type(exc).__name__}: {str(exc)[:200]}") from exc
+        return json.loads(r.output_text)
+
+    @staticmethod
+    def _turn(r) -> LlmTurn:
         calls = [FunctionCall(o.name, o.arguments, o.call_id)
                  for o in r.output if o.type == "function_call"]
         return LlmTurn(
