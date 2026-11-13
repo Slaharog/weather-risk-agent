@@ -64,7 +64,14 @@
   textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
   #send { background: var(--accent); color: var(--on-accent); border-color: var(--accent); padding: 0 18px; }
   #send:disabled { opacity: .55; cursor: wait; }
-  .count { max-width: 900px; margin: 4px auto 0; text-align: right; color: var(--muted); font-size: 12px; }
+  .meta-row { max-width: 900px; margin: 4px auto 0; display: flex; gap: 12px; align-items: baseline;
+              color: var(--muted); font-size: 12px; }
+  .meta-row p { margin: 0; }
+  .count { margin-left: auto; white-space: nowrap; }
+  .voice-status.error { color: var(--low); }
+  #mic { padding: 0 14px; }
+  #mic[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .thinking { color: var(--muted); font-style: italic; }
 </style>
 </head>
@@ -92,9 +99,15 @@
 <form id="form">
   <div class="composer">
     <textarea id="input" maxlength="1000" rows="1" placeholder="Ask about a hub, a region, or a hazard…" aria-label="Your question"></textarea>
+    <button id="mic" type="button" aria-pressed="false" title="Speak your question; the text appears in the box">Voice</button>
     <button id="send" type="submit">Send</button>
   </div>
-  <div class="count"><span id="count">0</span>/1000</div>
+  <div class="meta-row">
+    <p id="voice-status" class="voice-status" role="status"></p>
+    <p id="voice-note" hidden>Voice input isn't supported in this browser. Type your question instead.</p>
+    <p id="voice-hint" hidden>Voice uses your browser's speech service; this app receives only the text you send.</p>
+    <span class="count"><span id="count">0</span>/1000</span>
+  </div>
 </form>
 
 <script>
@@ -180,12 +193,77 @@ async function ask(question) {
   }
 }
 
-form.addEventListener("submit", e => { e.preventDefault(); const q = input.value; input.value = ""; updateCount(); ask(q); });
+form.addEventListener("submit", e => { e.preventDefault(); stopVoice(); const q = input.value; input.value = ""; updateCount(); ask(q); });
 input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
 const updateCount = () => document.getElementById("count").textContent = input.value.length;
 input.addEventListener("input", updateCount);
 document.getElementById("examples").addEventListener("click", e => { if (e.target.tagName === "BUTTON") ask(e.target.textContent); });
 document.getElementById("new").addEventListener("click", () => { conversationId = null; log.replaceChildren(); input.focus(); });
+
+// ---------- voice input (spec 003) ----------
+// The browser's speech recognizer fills the message box; only the Send button sends.
+let stopVoice = () => {};
+
+function initVoice(Recognition) {
+  const mic = document.getElementById("mic");
+  const status = document.getElementById("voice-status");
+  const say = (text, isError = false) => { status.textContent = text; status.classList.toggle("error", isError); };
+
+  if (!Recognition) {  // e.g. Firefox: no button, a short note, typing unchanged
+    mic.hidden = true;
+    document.getElementById("voice-note").hidden = false;
+    return;
+  }
+  document.getElementById("voice-hint").hidden = false;
+
+  const ERRORS = {
+    "not-allowed": "Microphone blocked. Allow it in the browser's site settings, or type instead.",
+    "service-not-allowed": "Microphone blocked. Allow it in the browser's site settings, or type instead.",
+    "no-speech": "Didn't catch that. Try again, or type your question.",
+    "audio-capture": "No microphone found. Type your question instead.",
+    "network": "Voice input is unavailable right now (network). Type your question instead.",
+  };
+  const OTHER = "Voice input stopped unexpectedly. Type your question instead.";
+
+  const rec = new Recognition();
+  rec.lang = "en-US";
+  rec.interimResults = true;   // show words while the analyst speaks
+  rec.continuous = false;      // stop at the first pause
+
+  let listening = false, base = "", heard = "", discard = false;
+
+  const setListening = on => {
+    listening = on;
+    mic.setAttribute("aria-pressed", String(on));
+    mic.textContent = on ? "Stop" : "Voice";
+  };
+
+  rec.onstart = () => { setListening(true); say("Listening… speak your question."); };
+  rec.onresult = e => {
+    if (discard) return;
+    let words = "";
+    for (let i = 0; i < e.results.length; i++) words += e.results[i][0].transcript;  // final + partial
+    heard = words.trim();
+    input.value = ((base && heard) ? base + " " : base) + heard;  // append; .value is plain text
+    input.value = input.value.slice(0, 1000);
+    updateCount();
+  };
+  rec.onerror = e => { if (e.error !== "aborted") say(ERRORS[e.error] || OTHER, true); };
+  rec.onend = () => {
+    setListening(false);
+    if (!discard && heard && !status.classList.contains("error")) say("Done. Check the text, then press Send.");
+  };
+
+  mic.addEventListener("click", () => {
+    if (listening) { rec.stop(); return; }  // second press: stop and keep the words
+    base = input.value.trim(); heard = ""; discard = false; say("");
+    try { rec.start(); } catch { say(OTHER, true); }
+  });
+
+  stopVoice = () => { if (listening) { discard = true; rec.abort(); } };
+} // end initVoice
+
+initVoice(window.SpeechRecognition || window.webkitSpeechRecognition);
 </script>
 </body>
 </html>

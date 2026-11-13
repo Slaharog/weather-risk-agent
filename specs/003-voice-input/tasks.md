@@ -16,13 +16,13 @@ description: "Task list for feature 003: Voice Input"
 Both stories live in the same function and file, so they are built together.
 
 - [X] T301 [US1] Smoke test, failing first, in `tests/smoke/test_api_chat.py`: `GET /` contains `id="mic"` with `aria-pressed="false"`, `id="voice-status"` with `role="status"`, the unsupported note text "Voice input isn't supported in this browser", the privacy hint "Voice uses your browser's speech service", and `function initVoice(`. Also check that the voice code never calls `form.requestSubmit`, `form.submit` or `ask(` (no auto-send, FR-302 and SC-303).
-- [ ] T302 [US1] Markup and CSS in `src/weather_risk/api/static/index.html`:
+- [X] T302 [US1] Markup and CSS in `src/weather_risk/api/static/index.html`:
   - a `<button id="mic" type="button" aria-pressed="false">Voice</button>` before Send, inside `.composer`;
   - a `role="status"` line `#voice-status`;
   - the hidden-by-default unsupported note and the privacy hint, in the existing `.count` row style;
   - a listening style (accent border plus the text label "Stop"; not color alone);
   - a `:focus-visible` ring.
-- [ ] T303 [US1][US2] `initVoice(Recognition)` in the same file. It covers:
+- [X] T303 [US1][US2] `initVoice(Recognition)` in the same file. It covers:
   - feature detection: no class means hide `#mic` and show the note;
   - `lang = "en-US"`, `interimResults = true`, `continuous = false`;
   - the toggle on click;
