@@ -99,11 +99,11 @@ Single project: `src/weather_risk/`, `tests/`, `evals/`, `config/`, `data/` at r
 
 **Independent Test**: `uv run wra stat denver snowfall_days_pct --year 2025` prints the percentage, snowfall days, days with data, missing days, the period, and the 0.25 cm definition; the compare function returns per-hazard verdicts consistent with the scores.
 
-- [ ] T031 [US3] TDD: write `tests/unit/test_compare.py`: 2-6 unique hubs and 1-6 unique hazards; result is a hub × hazard score matrix with components; `most_exposed` per hazard is the higher score; equal scores reported as a tie
-- [ ] T032 [US3] Implement `compare_hubs(hub_ids, hazards)` in `src/weather_risk/scoring/engine.py`
-- [ ] T033 [P] [US4] TDD: write `tests/unit/test_stats.py` per data-model §6: all 8 stats; `snowfall_days_pct` counts days with snowfall ≥ 0.25 cm; percent = `100 × qualifying_days / days_with_data`; missing days excluded from the denominator and reported; `year` must be 2016-2025
-- [ ] T034 [US4] Implement `src/weather_risk/scoring/stats.py` (`weather_stat(hub_id, stat, year) -> WeatherStat`)
-- [ ] T035 [US4] Add `wra stat <hub_id> <stat> [--year 2025]` to `src/weather_risk/cli.py`; extend `tests/smoke/test_cli.py`
+- [X] T031 [US3] TDD: write `tests/unit/test_compare.py`: 2-6 unique hubs and 1-6 unique hazards; result is a hub × hazard score matrix with components; `most_exposed` per hazard is the higher score; equal scores reported as a tie
+- [X] T032 [US3] Implement `compare_hubs(hub_ids, hazards)` in `src/weather_risk/scoring/engine.py`
+- [X] T033 [P] [US4] TDD: write `tests/unit/test_stats.py` per data-model §6: all 8 stats; `snowfall_days_pct` counts days with snowfall ≥ 0.25 cm; percent = `100 × qualifying_days / days_with_data`; missing days excluded from the denominator and reported; `year` must be 2016-2025
+- [X] T034 [US4] Implement `src/weather_risk/scoring/stats.py` (`weather_stat(hub_id, stat, year) -> WeatherStat`)
+- [X] T035 [US4] Add `wra stat <hub_id> <stat> [--year 2025]` to `src/weather_risk/cli.py`; extend `tests/smoke/test_cli.py`
 
 **Checkpoint — LLM-free milestone**: run quickstart V1-V3 and confirm identical numbers across CLI and API; commit and tag `milestone-llm-free`.
 

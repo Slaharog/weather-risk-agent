@@ -140,5 +140,27 @@ def breakdown(hub_id: str = typer.Argument(..., help="Hub id, e.g. dallas")) -> 
     _print_sources(engine)
 
 
+@app.command()
+def stat(
+    hub_id: str = typer.Argument(..., help="Hub id, e.g. denver"),
+    name: str = typer.Argument(..., help="Statistic, e.g. snowfall_days_pct"),
+    year: int = typer.Option(2025, help="Calendar year, 2016-2025 ('last year' = 2025)."),
+) -> None:
+    """One weather statistic for a hub and year, with the counts behind it. No LLM involved."""
+    engine = Engine.from_settings()
+    try:
+        s = engine.weather_stat(hub_id, name, year)
+    except (UnknownHub, ValueError) as exc:
+        typer.echo(exc.args[0], err=True)
+        raise typer.Exit(code=1) from None
+    hub = engine.hubs[hub_id].name
+    typer.echo(f"{hub}, {s.period_start} to {s.period_end}: {name} = {s.value:.1f} {s.unit}")
+    if s.qualifying_days is not None:
+        typer.echo(f"  qualifying days: {s.qualifying_days}")
+    typer.echo(f"  days with data: {s.days_with_data}, missing days: {s.missing_days}")
+    typer.echo(f"  definition: {s.definition}")
+    _print_sources(engine)
+
+
 if __name__ == "__main__":
     app()

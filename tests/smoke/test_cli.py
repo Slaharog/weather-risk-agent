@@ -21,3 +21,10 @@ def test_rank_unknown_hazard_is_a_user_error():
 def test_breakdown_runs_and_unknown_hub_is_a_user_error():
     assert runner.invoke(app, ["breakdown", "dallas"]).exit_code == 0
     assert runner.invoke(app, ["breakdown", "boston"]).exit_code == 1
+
+
+def test_stat_runs_and_rejects_bad_input():
+    ok = runner.invoke(app, ["stat", "denver", "snowfall_days_pct", "--year", "2025"])
+    assert ok.exit_code == 0 and "days with data" in ok.output
+    assert runner.invoke(app, ["stat", "denver", "snowfall_days_pct", "--year", "1990"]).exit_code == 1
+    assert runner.invoke(app, ["stat", "boston", "snowfall_days_pct"]).exit_code == 1

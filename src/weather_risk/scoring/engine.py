@@ -209,6 +209,30 @@ class Breakdown(BaseModel):
     hazards: list[HazardBreakdown]
 
 
+class CompareCell(BaseModel):
+    score: float
+    components: list[Component]
+
+
+class CompareRow(BaseModel):
+    hub_id: str
+    name: str
+    scores: dict[str, CompareCell]  # metric -> cell
+
+
+class Comparison(BaseModel):
+    metrics: list[str]
+    rows: list[CompareRow]
+    most_exposed: dict[str, str]  # metric -> hub id, or "tie"
+
+
+def verdict(scores: dict[str, float]) -> str:
+    """Hub id with the highest score, or 'tie' when the top score is shared."""
+    top = max(scores.values())
+    leaders = [h for h, s in scores.items() if s == top]
+    return leaders[0] if len(leaders) == 1 else "tie"
+
+
 # ---------- the engine ----------
 
 class Engine:
@@ -285,6 +309,38 @@ class Engine:
                 for h, hs in s.hazards.items()
             ],
         )
+
+    def _cell(self, hub_id: str, metric: str) -> CompareCell:
+        s = self.scores[hub_id]
+        if metric != OVERALL:
+            hs = s.hazards[Hazard(metric)]
+            return CompareCell(score=hs.score, components=hs.components)
+        weight = 1 / len(s.hazards)
+        return CompareCell(score=s.score, components=[
+            Component(indicator=h.value, label=f"{h.value.replace('_', ' ')} score", weight=weight,
+                      indicator_score=hs.score, contribution=weight * hs.score,
+                      raw_value=hs.score, raw_unit="score", source="this engine")
+            for h, hs in s.hazards.items()
+        ])
+
+    def compare_hubs(self, hub_ids: list[str], metrics: list[str]) -> Comparison:
+        if not 2 <= len(hub_ids) <= 6 or len(set(hub_ids)) != len(hub_ids):
+            raise ValueError("Compare 2 to 6 different hubs.")
+        if not 1 <= len(metrics) <= 6 or len(set(metrics)) != len(metrics):
+            raise ValueError("Compare 1 to 6 different hazards (or 'overall').")
+        metrics = [parse_metric(m) for m in metrics]
+        for h in hub_ids:
+            self._check_hub(h)
+        rows = [CompareRow(hub_id=h, name=self.hubs[h].name,
+                           scores={m: self._cell(h, m) for m in metrics}) for h in hub_ids]
+        most = {m: verdict({r.hub_id: r.scores[m].score for r in rows}) for m in metrics}
+        return Comparison(metrics=metrics, rows=rows, most_exposed=most)
+
+    def weather_stat(self, hub_id: str, stat: str, year: int):
+        from weather_risk.scoring.stats import compute_stat
+
+        self._check_hub(hub_id)
+        return compute_stat(hub_id, self.snapshot.weather[hub_id].days, stat, year)
 
     def data_sources(self) -> list[dict]:
         weather = list(self.snapshot.weather.values())
