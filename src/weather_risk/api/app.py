@@ -18,6 +18,7 @@ from weather_risk.agent.llm import LlmClient, LlmUnavailable, OpenAILlm
 from weather_risk.agent.loop import run_turn
 from weather_risk.agent.schemas import ChatResponse
 from weather_risk.agent.tools import ToolRegistry
+from weather_risk.alerts.history import History
 from weather_risk.alerts.scheduler import run_scheduler
 from weather_risk.api.limits import RateLimiter
 from weather_risk.data.store import snapshot_version
@@ -172,3 +173,22 @@ def chat(request: ChatRequest, http: Request) -> ChatResponse:
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
+
+
+# ---------- risk-change alerts (spec 002, contracts/http-api.md) ----------
+
+@app.get("/api/alerts")
+def alerts(limit: int = Query(50, ge=1, le=50)) -> dict:
+    """Recent alerts, newest first, and the last check. Public, no LLM. Never returns the
+    webhook URL, only whether one is configured (SC-206)."""
+    s = get_settings()
+    history = History(s.alerts_db)
+    hubs = engines.get().hubs
+    return {
+        "threshold": s.alert_threshold,
+        "interval_hours": s.alert_interval_hours,
+        "webhook_configured": s.alert_webhook_url is not None,
+        "last_check": history.last_check(),
+        "alerts": [{**a, "hub_name": hubs[a["hub_id"]].name if a["hub_id"] in hubs else a["hub_id"]}
+                   for a in history.list_alerts(limit)],
+    }
