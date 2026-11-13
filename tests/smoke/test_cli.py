@@ -16,3 +16,8 @@ def test_rank_runs_and_is_deterministic():
 def test_rank_unknown_hazard_is_a_user_error():
     result = runner.invoke(app, ["rank", "--hazard", "earthquake"])
     assert result.exit_code == 1
+
+
+def test_breakdown_runs_and_unknown_hub_is_a_user_error():
+    assert runner.invoke(app, ["breakdown", "dallas"]).exit_code == 0
+    assert runner.invoke(app, ["breakdown", "boston"]).exit_code == 1

@@ -24,3 +24,13 @@ def test_rankings_midwest_winter():
 def test_rankings_reject_unknown_values():
     assert client.get("/api/rankings", params={"hazard": "earthquake"}).status_code == 422
     assert client.get("/api/rankings", params={"region": "Mars"}).status_code == 422
+
+
+def test_breakdown_matches_rankings_and_404s_for_unknown_hub():
+    b = client.get("/api/hubs/dallas/breakdown").json()
+    overall = client.get("/api/rankings").json()["rankings"]
+    dallas = next(r for r in overall if r["hub_id"] == "dallas")
+    assert b["overall_score"] == dallas["score"]
+    assert b["overall_rank"] == dallas["rank"]
+    assert len(b["hazards"]) == 5
+    assert client.get("/api/hubs/boston/breakdown").status_code == 404

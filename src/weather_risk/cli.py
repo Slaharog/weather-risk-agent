@@ -11,7 +11,7 @@ import typer
 
 from weather_risk.data import sources, store
 from weather_risk.hubs import Region, load_hubs
-from weather_risk.scoring.engine import METRICS, Engine, parse_metric
+from weather_risk.scoring.engine import METRICS, Engine, UnknownHub, parse_metric
 from weather_risk.settings import get_settings
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, help="Weather Risk Intelligence Agent")
@@ -117,6 +117,27 @@ def rank(
         raise typer.Exit(code=1) from None
     engine = Engine.from_settings()
     _print_ranking(engine, metric, engine.rank_hubs(metric, region=region))
+
+
+@app.command()
+def breakdown(hub_id: str = typer.Argument(..., help="Hub id, e.g. dallas")) -> None:
+    """Show everything behind a hub's score. No LLM involved."""
+    engine = Engine.from_settings()
+    try:
+        b = engine.get_hub_breakdown(hub_id)
+    except UnknownHub as exc:
+        typer.echo(exc.args[0], err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(f"{b.name} ({b.region}): overall {b.overall_score:.1f}, "
+               f"rank {b.overall_rank} of {b.hub_count}\n")
+    for h in b.hazards:
+        typer.echo(f"{h.hazard.value:<14} {h.score:5.1f}   rank {h.rank:>2} of {b.hub_count}")
+        for c in h.components:
+            typer.echo(f"    {c.weight:4.2f} x {c.indicator_score:5.1f} = {c.contribution:5.1f}   "
+                       f"{c.label}: {c.raw_value:.3g} {c.raw_unit}")
+        if h.missing:
+            typer.echo(f"    missing (weights re-normalized): {', '.join(h.missing)}")
+    _print_sources(engine)
 
 
 if __name__ == "__main__":

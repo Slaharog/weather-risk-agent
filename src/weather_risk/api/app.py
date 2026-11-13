@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException, Query
 
 from weather_risk.data.store import snapshot_version
 from weather_risk.hubs import Region
-from weather_risk.scoring.engine import METRICS, OVERALL, Engine, parse_metric
+from weather_risk.scoring.engine import METRICS, OVERALL, Engine, UnknownHub, parse_metric
 from weather_risk.settings import get_settings
 
 app = FastAPI(title="Weather Risk Intelligence Agent", version="0.1.0")
@@ -69,3 +69,13 @@ def rankings(
         "rankings": [r.model_dump() for r in engine.rank_hubs(metric, region=region)],
         "data_sources": engine.data_sources(),
     }
+
+
+@app.get("/api/hubs/{hub_id}/breakdown")
+def hub_breakdown(hub_id: str) -> dict:
+    engine = engines.get()
+    try:
+        b = engine.get_hub_breakdown(hub_id)
+    except UnknownHub as exc:
+        raise HTTPException(status_code=404, detail=exc.args[0]) from None
+    return {**b.model_dump(mode="json"), "data_sources": engine.data_sources()}

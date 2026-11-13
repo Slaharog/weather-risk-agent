@@ -86,10 +86,10 @@ Single project: `src/weather_risk/`, `tests/`, `evals/`, `config/`, `data/` at r
 
 **Independent Test**: `uv run wra breakdown dallas` shows five hazard scores whose components add up to each score, and matches `GET /api/hubs/dallas/breakdown`.
 
-- [ ] T027 [US2] TDD: write `tests/unit/test_breakdown.py`: breakdown holds the overall score and overall rank, each hazard score with its rank among all hubs, and every component (`indicator`, `weight`, `indicator_score`, `contribution`, `raw_value`, `raw_unit`, `source`); unknown hub raises a not-found error
-- [ ] T028 [US2] Implement `get_hub_breakdown(hub_id)` in `src/weather_risk/scoring/engine.py`
-- [ ] T029 [US2] Add `wra breakdown <hub_id>` to `src/weather_risk/cli.py`
-- [ ] T030 [US2] Add `GET /api/hubs/{hub_id}/breakdown` (`404` on unknown hub) to `src/weather_risk/api/app.py`; extend `tests/smoke/test_api_engine.py`
+- [X] T027 [US2] TDD: write `tests/unit/test_breakdown.py`: breakdown holds the overall score and overall rank, each hazard score with its rank among all hubs, and every component (`indicator`, `weight`, `indicator_score`, `contribution`, `raw_value`, `raw_unit`, `source`); unknown hub raises a not-found error
+- [X] T028 [US2] Implement `get_hub_breakdown(hub_id)` in `src/weather_risk/scoring/engine.py`
+- [X] T029 [US2] Add `wra breakdown <hub_id>` to `src/weather_risk/cli.py`
+- [X] T030 [US2] Add `GET /api/hubs/{hub_id}/breakdown` (`404` on unknown hub) to `src/weather_risk/api/app.py`; extend `tests/smoke/test_api_engine.py`
 
 ---
 

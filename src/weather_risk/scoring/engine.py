@@ -187,6 +187,28 @@ class RankRow(BaseModel):
     top_drivers: list[Driver]
 
 
+class UnknownHub(KeyError):
+    """A hub id that is not in config/hubs.toml."""
+
+
+class HazardBreakdown(BaseModel):
+    hazard: Hazard
+    score: float
+    rank: int  # among all hubs, 1 = most exposed
+    components: list[Component]
+    missing: list[str]
+
+
+class Breakdown(BaseModel):
+    hub_id: str
+    name: str
+    region: str
+    overall_score: float
+    overall_rank: int
+    hub_count: int
+    hazards: list[HazardBreakdown]
+
+
 # ---------- the engine ----------
 
 class Engine:
@@ -241,6 +263,28 @@ class Engine:
             for h, rank, tied in ordered
         ]
         return rows[:limit] if limit else rows
+
+    def _check_hub(self, hub_id: str) -> None:
+        if hub_id not in self.hubs:
+            raise UnknownHub(f"'{hub_id}' is not a hub. Hubs: {', '.join(self.hubs)}")
+
+    def rank_of(self, hub_id: str, metric: str) -> int:
+        return next(r.rank for r in self.rank_hubs(metric) if r.hub_id == hub_id)
+
+    def get_hub_breakdown(self, hub_id: str) -> Breakdown:
+        """Everything behind a hub's score: the 'why' for explanations (FR-013)."""
+        self._check_hub(hub_id)
+        s, hub = self.scores[hub_id], self.hubs[hub_id]
+        return Breakdown(
+            hub_id=hub_id, name=hub.name, region=hub.region.value,
+            overall_score=s.score, overall_rank=self.rank_of(hub_id, OVERALL),
+            hub_count=len(self.hubs),
+            hazards=[
+                HazardBreakdown(hazard=h, score=hs.score, rank=self.rank_of(hub_id, h.value),
+                                components=hs.components, missing=hs.missing)
+                for h, hs in s.hazards.items()
+            ],
+        )
 
     def data_sources(self) -> list[dict]:
         weather = list(self.snapshot.weather.values())
