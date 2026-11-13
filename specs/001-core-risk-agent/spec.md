@@ -56,7 +56,7 @@ The analyst asks "Compare Miami and Houston in terms of hurricane and flood expo
 **Acceptance Scenarios**:
 
 1. **Given** the data is loaded, **When** the analyst compares Miami and Houston on hurricane and flood, **Then** the answer shows both hubs' scores for both hazards and a per-hazard verdict consistent with the scores.
-2. **Given** the analyst names a city that is not a hub, **When** asking for a comparison, **Then** the agent says that city is not a hub, names the nearest hub if there is one, and does not invent data.
+2. **Given** the analyst names a city that is not a hub, **When** asking for a comparison, **Then** the agent says that city is not a hub, lists the hubs in the same region when the region can be determined, and does not invent data.
 
 ---
 
@@ -117,7 +117,7 @@ The operator starts the system from a fresh copy of the repository, uses it with
 - **Missing data for a hub or hazard**: the score is computed from available components only if the rule for that case is defined (see FR-011); the answer lists the missing component and lowers confidence.
 - **Ties in ranking**: tied hubs are shown with equal scores and a stable, documented tie-break order.
 - **LLM output that fails validation twice**: the analyst sees a clear "could not produce a valid answer, please rephrase" message, never a malformed or partial answer.
-- **Very long or empty input**: input over the limit is rejected with a message; empty input is ignored.
+- **Very long or empty input**: the chat page does not send empty input; the API rejects empty or over-limit input with a validation error and a message.
 - **LLM service unavailable or credential missing**: the chat shows a clear error; the system does not crash.
 
 ## Requirements *(mandatory)*
@@ -161,8 +161,8 @@ The operator starts the system from a fresh copy of the repository, uses it with
 **Interface**
 
 - **FR-023**: The system MUST expose the agent through a documented API that accepts a conversation identifier and a message and returns the structured answer.
-- **FR-029**: Scores, rankings, and breakdowns MUST be viewable without the language model, through a direct API endpoint (for example, all hubs ranked by a chosen hazard) and a command-line command that prints the ranking table. The agent's capabilities MUST use the same scoring functions, so both paths always show identical numbers.
 - **FR-024**: The system MUST provide a web chat page that uses that API, shows the narrative, the numbers table, and the "about this answer" panel, and lets the analyst start a new conversation.
+- **FR-029**: Scores, rankings, and breakdowns MUST be viewable without the language model, through a direct API endpoint (for example, all hubs ranked by a chosen hazard) and a command-line command that prints the ranking table. The agent's capabilities MUST use the same scoring functions, so both paths always show identical numbers.
 
 **Evaluation and documentation**
 

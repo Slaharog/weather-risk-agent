@@ -1,6 +1,8 @@
 <!--
 Sync Impact Report
-Version change: 1.0.0 -> 1.1.0 (MINOR: materially expanded guidance after a grilling round)
+Version change: 1.1.0 -> 1.1.1 (PATCH: Principle IV eval sampling wording now covers
+  reasoning models, which take reasoning effort instead of temperature; found by speckit-analyze)
+Previous change: 1.0.0 -> 1.1.0 (MINOR: materially expanded guidance after a grilling round)
 Modified principles (no renames):
   I. Code renders all user-visible numbers; scores must be decomposable
   III. Final-answer schema requires data_sources, assumptions, limitations, confidence
@@ -82,7 +84,8 @@ clearly. A wrong answer delivered with confidence is worse than a stated limit.
   refused.
 - An LLM judge MAY score explanation quality against a rubric, but its result MUST be
   reported separately and never mixed into the primary pass rate.
-- Evals run each case once, at low temperature, against the cached data.
+- Evals run each case once, with the lowest-variance settings the model supports (low
+  temperature, or low reasoning effort on reasoning models), against the cached data.
 - No work is called done without running the tests and evals and showing their output.
 
 Rationale: the assignment requires an eval set, and Moveo values evals. Tests turn
@@ -167,4 +170,4 @@ defaults matter more than the features.
 - Reviews (`code-reviewer`, `reality-checker`, `speckit-analyze`) check compliance with these
   principles. Runtime guidance for the assistant lives in `CLAUDE.md`.
 
-**Version**: 1.1.0 | **Ratified**: 2026-11-12 | **Last Amended**: 2026-11-13
+**Version**: 1.1.1 | **Ratified**: 2026-11-12 | **Last Amended**: 2026-11-13

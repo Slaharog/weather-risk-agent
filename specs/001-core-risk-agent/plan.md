@@ -126,4 +126,4 @@ pyproject.toml, uv.lock, .env.example, README.md
 | Deviation | Why needed | Simpler alternative rejected because |
 |---|---|---|
 | JSON files instead of SQLite (constitution: "SQLite unless a plan justifies otherwise") | The seed must be plain files in git anyway, and this feature has no queries, history, or concurrent writers. JSON files are simpler. | Adding SQLite now adds a schema and a loader for no benefit. It arrives with spec 002, where score history needs it. |
-| `reasoning_effort` instead of "low temperature" for evals (Principle IV wording) | Current OpenAI models are reasoning models configured by reasoning effort, not temperature (research R4). | Not an alternative: the parameter is not offered. The intent, lowest variance, is kept, and the deterministic checks stay primary. |
+| ~~`reasoning_effort` instead of "low temperature"~~ Resolved by constitution v1.1.1, which now says "lowest-variance settings the model supports". | n/a | n/a |

@@ -60,3 +60,10 @@ Each entry records what was chosen, the alternatives considered, and why.
 - **Snowfall day >= 0.25 cm (0.1 in)**, the NWS "measurable snowfall" threshold. Alternatives: > 0 (inflated by trace amounts in model data), >= 1 cm (no standard behind it).
 - **Plausibility tests** written before seeing real scores. Rule: a failure triggers a bug/data investigation first; any weight or cap change needs a dated entry here.
 - **Step 3 milestone:** CLI plus JSON API, no separate rankings web page.
+
+## 2026-11-13 - speckit-analyze remediation
+
+- Added eval check `narrative_numbers_grounded` (the LLM narrative may only use numbers present in tool results) and latency reporting (SC-008).
+- Spec: a non-hub city now gets "hubs in the same region" instead of "the nearest hub" (no geocoding, so "nearest" would be an LLM guess).
+- Refresh recomputes and the server reloads when the manifest changes; code lowers confidence when data is missing.
+- Constitution v1.1.1 (PATCH): eval sampling wording covers reasoning models.

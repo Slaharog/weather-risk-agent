@@ -159,3 +159,5 @@ Period: one calendar year from 2016 to 2025 ("last year" = 2025). Percent = `100
 - `answer_type`
 - `numbers_match_engine: true` (rendered table values equal a fresh engine call)
 - `narrative_must_not_contain` (optional; for example invented hub names)
+
+Applied to every case automatically: `narrative_numbers_grounded` (every number in the narrative appears, within display rounding, in that turn's tool results; years and rank ordinals from the question are allowed) and a recorded duration for latency reporting.
