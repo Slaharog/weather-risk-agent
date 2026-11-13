@@ -50,3 +50,13 @@ Each entry records what was chosen, the alternatives considered, and why.
 - **Scoring:** each hazard is a weighted sum of FEMA national frequency percentiles and observed-day indicators on fixed caps; overall = mean of 5 hazards. Caps and weights are documented judgment calls.
 - **Model:** OpenAI Responses API, default `gpt-6.1-sol` (OpenAI's "balance intelligence and cost" pick), configurable; reasoning effort instead of temperature.
 - **Storage:** JSON files only for 001; SQLite deferred to the alert spec.
+
+## 2026-11-13 - Scoring grilling (plan 001)
+
+- **Overall = equal average of 5 hazards.** Alternative: 0.5 x mean + 0.5 x worst hazard, to reward single extreme hazards (Miami hurricanes). Rejected for simplicity; per-hazard rankings already surface single-hazard hotspots.
+- **Source mix as planned.** Each hazard leans on the source that measures it best: hurricane FEMA only (reanalysis cannot identify hurricanes), storms 80% and floods 70% FEMA (the 25 km grid smooths gusts and local downpours), winter and heat 50/50 (the grid measures snow, cold and heat well). Alternatives: FEMA only (weather API would not affect rankings), weather-heavier (weakest exactly where it would weigh most).
+- **Fixed, documented caps.** Alternatives: caps from our 16 hubs (makes scores relative, reversing the absolute-scoring decision), caps from a national grid of ~100 points (most defensible, too costly for 24h).
+- **10-year window, 2016-2025.** Alternatives: 30-year climate normal (more stable, may understate recent trends), 5 years (too noisy).
+- **Snowfall day >= 0.25 cm (0.1 in)**, the NWS "measurable snowfall" threshold. Alternatives: > 0 (inflated by trace amounts in model data), >= 1 cm (no standard behind it).
+- **Plausibility tests** written before seeing real scores. Rule: a failure triggers a bug/data investigation first; any weight or cap change needs a dated entry here.
+- **Step 3 milestone:** CLI plus JSON API, no separate rankings web page.

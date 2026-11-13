@@ -104,6 +104,15 @@ Rule: `sum(component.contribution) == score` (tested).
 - Sort by unrounded score descending; **tie-break by hub `id` alphabetically**.
 - Equal unrounded scores share the same displayed score but keep distinct ranks in tie-break order; the table marks ties.
 
+**Plausibility tests** (written before looking at real scores, run against the seed snapshot):
+- Miami and Houston are the top 2 hubs for `hurricane`.
+- Phoenix and Dallas are the top 2 hubs for `heat`.
+- Minneapolis is in the top 3 for `winter`.
+- Los Angeles is in the bottom 3 for `winter`.
+- Denver's `hurricane` score is 0.
+
+If one fails, first look for a bug or a data problem. A weight or cap may change only with a dated entry in `docs/decisions.md` explaining why, never just to make a test pass.
+
 **Missing components**: if a whole indicator is unavailable for a hub (a source failed and there is no earlier snapshot), the hazard score is the weighted sum of the remaining indicators with weights re-normalized to 1.0, and the component is flagged `missing`. Answers then list it as a limitation and confidence cannot be `high`.
 
 ## 6. Statistics

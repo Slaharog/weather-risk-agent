@@ -115,7 +115,7 @@ pyproject.toml, uv.lock, .env.example, README.md
 
 1. Project skeleton (uv, settings, hubs config) and the seed snapshot fetch (`wra refresh` writes `data/seed` once).
 2. Scoring engine test-first: indicators, percentiles, hazard scores, overall, ranking with tie-break, breakdown, compare, statistics.
-3. LLM-free surfaces: `wra rank|breakdown|stat`, `GET /api/rankings`, `GET /api/hubs/{id}/breakdown`. This is a demonstrable milestone even if the agent slips.
+3. LLM-free surfaces: `wra rank|breakdown|stat`, `GET /api/rankings`, `GET /api/hubs/{id}/breakdown` (JSON, browsable at `/docs`), plus the plausibility tests from data-model §5. This is a demonstrable milestone even if the agent slips.
 4. Agent: schemas, tools, the LLM module, the loop, the system prompt; `POST /api/chat` with conversation memory.
 5. Chat page.
 6. Eval set and runner; iterate on the prompt until at least 90% pass.
