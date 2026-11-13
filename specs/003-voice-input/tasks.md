@@ -32,13 +32,13 @@ Both stories live in the same function and file, so they are built together.
   - `end` resetting the button and announcing "Done…" if text was added;
   - the form submit handler stopping recognition first.
   - It is called once: `initVoice(window.SpeechRecognition || window.webkitSpeechRecognition)`.
-- [ ] T304 [US1][US2] Browser check with the Chrome tool against a local server:
+- [X] T304 [US1][US2] Browser check with the Chrome tool against a local server:
   - inject a `FakeRecognition` class and call `initVoice(FakeRecognition)`;
   - type "Hi", click Voice, fire an interim result then a final result, and check that the box shows "Hi <words>", the button says "Stop" then "Voice", the status announces each step, and no `/api/chat` request was made;
   - fire `not-allowed` and check the message;
   - call `initVoice(undefined)` on a fresh load and check that the button is hidden and the note is visible.
   - Record the results in the commit message.
-- [ ] T305 Impeccable triage of the changed page: hook findings, plus contrast computed for the new text in both themes (at least 4.5:1). Fix or document.
+- [X] T305 Impeccable triage of the changed page: hook findings, plus contrast computed for the new text in both themes (at least 4.5:1). Fix or document.
 
 ## Phase 2: Polish
 
