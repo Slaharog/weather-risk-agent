@@ -191,6 +191,10 @@ class UnknownHub(KeyError):
     """A hub id that is not in config/hubs.toml."""
 
 
+class DataError(ValueError):
+    """The data snapshot does not match the hub list (for example a county is missing)."""
+
+
 class HazardBreakdown(BaseModel):
     hazard: Hazard
     score: float
@@ -242,6 +246,11 @@ class Engine:
         self.hubs = {h.id: h for h in hubs}
         self.snapshot = snapshot
         counties = {c.fips: c for c in snapshot.nri.counties}
+        for hub in hubs:  # fail early with a clear message instead of a KeyError deep inside
+            if hub.county_fips not in counties:
+                raise DataError(f"County {hub.county_fips} of hub '{hub.id}' is not in the NRI data.")
+            if hub.id not in snapshot.weather:
+                raise DataError(f"No weather data for hub '{hub.id}'.")
         self.scores: dict[str, OverallScore] = {}
         for hub in hubs:
             values = indicator_values(counties[hub.county_fips], snapshot.nri.counties,

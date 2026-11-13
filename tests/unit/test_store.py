@@ -57,3 +57,11 @@ def test_manifest_records_dates_version_and_window(tmp_path: Path):
     assert manifest["weather"]["denver"]["retrieved_at"] == "2026-11-13"
     assert manifest["weather"]["denver"]["start_date"] == "2025-01-01"
     assert manifest["nri"]["version"] == "December 2025"
+
+
+def test_snapshot_version_changes_only_when_a_refresh_completes(tmp_path: Path):
+    seed, live = tmp_path / "seed", tmp_path / "live"
+    store.save_weather(live, _weather("denver", "2026-11-13"))  # mid-refresh: no marker yet
+    assert store.snapshot_version(seed, live) == 0.0
+    store.mark_refresh_complete(live, "2026-11-13T12:00:00")
+    assert store.snapshot_version(seed, live) > 0.0

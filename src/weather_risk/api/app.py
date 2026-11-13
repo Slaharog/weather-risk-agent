@@ -7,8 +7,8 @@ agent's tools use, so the numbers are identical on every path (FR-029).
 import threading
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
 from weather_risk.agent.conversations import ConversationStore
@@ -16,6 +16,7 @@ from weather_risk.agent.llm import LlmClient, LlmUnavailable, OpenAILlm
 from weather_risk.agent.loop import run_turn
 from weather_risk.agent.schemas import ChatResponse
 from weather_risk.agent.tools import ToolRegistry
+from weather_risk.api.limits import RateLimiter
 from weather_risk.data.store import snapshot_version
 from weather_risk.hubs import Region
 from weather_risk.scoring.engine import METRICS, OVERALL, Engine, UnknownHub, parse_metric
@@ -92,8 +93,20 @@ def hub_breakdown(hub_id: str) -> dict:
 # ---------- chat (the agent) ----------
 
 MAX_MESSAGE_CHARS = 1000
+MAX_CHAT_BODY_BYTES = 16_384  # far above a 1,000-character message plus a conversation id
 STATIC_DIR = Path(__file__).parent / "static"
 conversations = ConversationStore()
+limiter = RateLimiter(get_settings().chat_per_minute, get_settings().chat_per_day)
+
+
+@app.middleware("http")
+async def limit_chat_body(request: Request, call_next):
+    """Reject oversized chat bodies before they are read and parsed."""
+    if request.url.path == "/api/chat":
+        size = request.headers.get("content-length")
+        if size is None or not size.isdigit() or int(size) > MAX_CHAT_BODY_BYTES:
+            return JSONResponse({"detail": "Request body missing or too large."}, status_code=413)
+    return await call_next(request)
 _llm: LlmClient | None = None
 
 
@@ -119,14 +132,18 @@ class ChatRequest(BaseModel):
 
 
 @app.post("/api/chat", response_model=ChatResponse)
-def chat(request: ChatRequest) -> ChatResponse:
+def chat(request: ChatRequest, http: Request) -> ChatResponse:
+    client = http.client.host if http.client else "unknown"
+    if not limiter.allow(client):
+        raise HTTPException(status_code=429, detail="Too many questions right now. Please wait a minute.")
     try:
         llm = get_llm()
     except LlmUnavailable as exc:
         raise HTTPException(status_code=503, detail=f"Chat is not configured: {exc}") from None
     convo = conversations.get_or_create(request.conversation_id)
-    response = run_turn(convo, request.message, llm, ToolRegistry(engines.get()))
-    conversations.save(convo)
+    with convo.lock:  # one turn at a time per conversation
+        response = run_turn(convo, request.message, llm, ToolRegistry(engines.get()))
+        conversations.save(convo)
     return response
 
 

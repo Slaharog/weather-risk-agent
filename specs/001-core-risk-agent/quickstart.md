@@ -81,3 +81,13 @@ uv run wra refresh
 ```
 
 Expected: both sources fetched, new retrieval dates shown by `GET /api/health`. With the network disabled, the command fails with a clear message and V1 still produces the previous numbers.
+
+## Validation notes (T061, 2026-11-13)
+
+Fresh `git clone` into an empty folder on the development machine (Windows 11, uv 0.13.3, `UV_SYSTEM_CERTS=1`):
+
+- `uv sync`: 5 s (packages cached). No `.env` present.
+- V1: `python -m weather_risk rank --hazard winter --region Midwest` printed the 7 Midwest hubs from the committed seed, no network to the data providers needed.
+- V2: `python -m pytest`: 119 passed in 4.2 s.
+- Total from clone to first ranking and green tests: 13 s (SC-007 target: under 10 minutes to first answer).
+- V4/V5 (chat, evals) need `OPENAI_API_KEY`; verified separately in the working copy: the four brief questions answered in 5-8 s each, evals 20/20.

@@ -79,17 +79,18 @@ def compute_stat(hub_id: str, days: Sequence[DailyWeather], stat: str, year: int
     if not FIRST_YEAR <= year <= LAST_YEAR:
         raise ValueError(f"Data covers {FIRST_YEAR}-{LAST_YEAR}; {year} is outside that period.")
     sd = STATS[stat]
-    in_year = [d for d in days if d.date.year == year]
-    with_data = [d for d in in_year if getattr(d, sd.field) is not None]
-    missing = len(in_year) - len(with_data)
+    with_data = [d for d in days if d.date.year == year and getattr(d, sd.field) is not None]
+    if not with_data:
+        raise ValueError(f"There is no data for {year} at this hub, so this cannot be computed.")
+    days_in_year = (date(year + 1, 1, 1) - date(year, 1, 1)).days
+    missing = days_in_year - len(with_data)  # null values and days absent from the data
 
     qualifying = None
     if sd.kind == "total":
         value = sum(getattr(d, sd.field) for d in with_data)
     else:
         qualifying = sum(1 for d in with_data if sd.test(d))
-        value = qualifying if sd.kind == "count" else (
-            100.0 * qualifying / len(with_data) if with_data else 0.0)
+        value = qualifying if sd.kind == "count" else 100.0 * qualifying / len(with_data)
 
     return WeatherStat(
         hub_id=hub_id, stat=stat, period_start=date(year, 1, 1), period_end=date(year, 12, 31),

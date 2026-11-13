@@ -81,9 +81,46 @@ def numbers_in_json(value) -> list[float]:
 
 
 def grounded(number: float, allowed: list[float]) -> bool:
-    """Within display rounding (1 decimal) of a tool-result number, or the same magnitude
-    written without its sign (e.g. '18 °C below' for -18)."""
-    return any(abs(number - a) <= 0.051 or abs(abs(number) - abs(a)) <= 0.051 for a in allowed)
+    """True only if the number equals a value exactly as the tools returned it.
+
+    Tool results are already rounded the way the user sees them (scores 1 decimal, raw values
+    3 significant figures), so no tolerance is needed: '51' for 51.2 is the model rounding on
+    its own and counts as ungrounded.
+    """
+    return any(abs(number - a) < 1e-9 for a in allowed)
+
+
+def table_mismatches(tool: str, args: dict, table: dict, engine: Engine,
+                     name_to_id: dict[str, str]) -> list[str]:
+    """Compare a shown table with the engine's own API (independent of the tool formatting code)."""
+    rows, bad = table["rows"], []
+    r1 = lambda x: round(x, 1)  # noqa: E731 - display rounding
+
+    if tool == "rank_hubs":
+        expected = engine.rank_hubs(args["hazard"], region=args.get("region"), limit=args.get("limit"))
+        got = [(row[0], name_to_id[row[1]], row[3]) for row in rows]
+        want = [(r.rank, r.hub_id, r1(engine.metric_score(r.hub_id, args["hazard"]))) for r in expected]
+        if got != want:
+            bad.append(f"rank_hubs table {got} != engine {want}")
+    elif tool == "get_hub_breakdown":
+        hub = args["hub_id"]
+        for row, (hazard, hs) in zip(rows, engine.scores[hub].hazards.items(), strict=True):
+            if row[1] != r1(hs.score) or row[2] != engine.rank_of(hub, hazard.value):
+                bad.append(f"breakdown row {row[:3]} != engine {hazard.value} "
+                           f"{r1(hs.score)} rank {engine.rank_of(hub, hazard.value)}")
+    elif tool == "compare_hubs":
+        for row, metric in zip(rows, args["hazards"], strict=True):
+            want = [r1(engine.metric_score(h, metric)) for h in args["hub_ids"]]
+            if row[1:-1] != want:
+                bad.append(f"compare row {metric} {row[1:-1]} != engine {want}")
+    elif tool == "get_weather_stat":
+        s = engine.weather_stat(args["hub_id"], args["stat"], args["year"])
+        if rows[0][0] != r1(s.value) or rows[0][3] != s.days_with_data:
+            bad.append(f"stat {rows[0][0]} / {rows[0][3]} days != engine {r1(s.value)} / {s.days_with_data}")
+    elif tool == "list_coverage":
+        if len(rows) != len(engine.hubs):
+            bad.append(f"coverage lists {len(rows)} hubs, engine has {len(engine.hubs)}")
+    return bad
 
 
 def _args_match(expected: dict, actual: dict) -> bool:
@@ -99,8 +136,9 @@ def _args_match(expected: dict, actual: dict) -> bool:
 
 # ---------- checks ----------
 
-def check_case(case: dict, resp: ChatResponse, convo_items: list[dict], user_text: str,
-               fresh_tools: ToolRegistry, hub_names: dict[str, str]) -> list[str]:
+def check_case(case: dict, resp: ChatResponse, turn_items: list[dict], user_text: str,
+               engine: Engine, hub_names: dict[str, str]) -> list[str]:
+    """`turn_items`: only the items produced by the LAST user turn (its tool results)."""
     exp, failures = case.get("expect", {}), []
     if resp.error or resp.answer is None:
         return [f"no answer: {resp.error}"]
@@ -131,19 +169,23 @@ def check_case(case: dict, resp: ChatResponse, convo_items: list[dict], user_tex
         if s.lower() in narrative:
             failures.append(f"narrative contains forbidden '{s}'")
 
-    # Automatic check 1: every table equals a fresh deterministic tool call (numbers_match_engine).
-    ok_calls = [c for c in resp.tool_calls]
-    fresh_tables = []
-    for c in ok_calls:
-        out = fresh_tools.execute(c.tool, json.dumps(c.arguments))
-        if out.ok and out.table is not None:
-            fresh_tables.append(out.table.model_dump())
-    if [t.model_dump() for t in resp.tables] != fresh_tables:
-        failures.append("numbers_match_engine: tables differ from a fresh engine call")
+    # Automatic check 1 (numbers_match_engine): each table's numbers equal the engine's own API.
+    # Tables come only from successful tool calls, in order; pair them back up.
+    name_to_id = {name: hid for hid, name in hub_names.items()}
+    successful = [(c, json.loads(o["output"])) for c, o in zip(
+        resp.tool_calls,
+        [i for i in turn_items if i.get("type") == "function_call_output"], strict=False)]
+    calls_with_tables = [c for c, out in successful if "error" not in out]
+    if len(calls_with_tables) != len(resp.tables):
+        failures.append(f"numbers_match_engine: {len(resp.tables)} tables for "
+                        f"{len(calls_with_tables)} successful tool calls")
+    for c, table in zip(calls_with_tables, resp.tables, strict=False):
+        for problem in table_mismatches(c.tool, c.arguments, table.model_dump(), engine, name_to_id):
+            failures.append(f"numbers_match_engine: {problem}")
 
-    # Automatic check 2: narrative numbers are grounded in tool results or the user's question.
+    # Automatic check 2: narrative numbers come from THIS turn's tool results or the user's words.
     allowed = numbers_in(user_text)
-    for item in convo_items:
+    for item in turn_items:
         if item.get("type") == "function_call_output":
             allowed += numbers_in_json(json.loads(item["output"]))
     ungrounded = [n for n in numbers_in(a.narrative) if not grounded(n, allowed)]
@@ -181,12 +223,13 @@ def run(model: str | None = None, case_id: str | None = None, judge: bool = Fals
     for case in cases:
         llm, convo = CountingLlm(real), Conversation.new()
         start = time.perf_counter()
-        resp = None
+        resp, last_turn_start = None, 0
         for text in case["turns"]:
+            last_turn_start = len(convo.items)
             resp = run_turn(convo, text, llm, ToolRegistry(engine))
         seconds = time.perf_counter() - start
-        failures = check_case(case, resp, convo.items, " ".join(case["turns"]),
-                              ToolRegistry(engine), hub_names)
+        failures = check_case(case, resp, convo.items[last_turn_start:], " ".join(case["turns"]),
+                              engine, hub_names)
         result = CaseResult(
             id=case["id"], category=case["category"], passed=not failures, failures=failures,
             seconds=round(seconds, 2), model_calls=llm.calls, input_tokens=llm.input_tokens,

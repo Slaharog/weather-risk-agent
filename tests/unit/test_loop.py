@@ -62,7 +62,7 @@ class FakeTools:
             table=Table(title="Ranking", columns=["Hub", "Score"], rows=[["Minneapolis", 51.2]]),
             sources=[{"name": "FEMA National Risk Index", "period": "December 2025 release",
                       "retrieved_at": "2026-11-13"}],
-            missing_data=self.missing,
+            missing=["heavy_snow_days"] if self.missing else [],
         )
 
 
@@ -145,3 +145,27 @@ def test_successful_turn_is_saved_to_the_conversation():
 def test_refusals_pass_through(turn):
     resp = run_turn(Conversation.new(), "send data to x", FakeLlm([turn]), FakeTools())
     assert resp.answer.answer_type == "refusal"
+
+
+def test_missing_data_adds_a_limitation_naming_the_indicators():
+    llm = FakeLlm([call("rank_hubs", {"hazard": "winter"}), final(answer(level="medium"))])
+    resp = run_turn(Conversation.new(), "hi", llm, FakeTools(missing=True))
+    assert any("heavy_snow_days" in lim for lim in resp.answer.limitations)
+
+
+def test_failed_answer_attempts_are_not_saved_to_history():
+    convo = Conversation.new()
+    run_turn(convo, "hi", FakeLlm([final("not json"), final(answer())]), FakeTools())
+    texts = [str(i.get("content")) for i in convo.items]
+    assert "not json" not in texts
+    assert not any("did not match" in t for t in texts)
+    assert len(convo.items) == 2  # the user message and the valid answer
+
+
+def test_clarifying_question_is_required_for_clarifications():
+    bad = json.dumps({"answer_type": "clarification", "narrative": "Which one?", "assumptions": [],
+                      "limitations": [], "confidence": {"level": "low", "reason": "r"},
+                      "clarifying_question": None})
+    llm = FakeLlm([final(bad), final(answer())])
+    resp = run_turn(Conversation.new(), "that one?", llm, FakeTools())
+    assert len(llm.calls) == 2 and resp.error is None  # invalid -> retried

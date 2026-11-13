@@ -73,6 +73,7 @@ def refresh(
             failures += 1
             typer.echo(f"nri      FAILED ({exc}); previous data kept", err=True)
 
+    store.mark_refresh_complete(root, time.strftime("%Y-%m-%dT%H:%M:%S"))
     typer.echo(f"written to {root}\n")
     try:
         engine = Engine.from_settings()

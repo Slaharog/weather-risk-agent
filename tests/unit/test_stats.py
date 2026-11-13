@@ -68,3 +68,16 @@ def test_year_outside_the_covered_period_is_rejected(year):
 def test_unknown_stat_is_rejected():
     with pytest.raises(ValueError):
         compute_stat("x", _year(), "earthquakes", 2025)
+
+
+def test_year_without_any_usable_data_is_an_error_not_zero():
+    days = [DailyWeather(date=d.date, snowfall_cm=None, precipitation_mm=0.0, tmax_c=1.0,
+                         tmin_c=0.0, gust_max_kmh=1.0) for d in _year()]
+    with pytest.raises(ValueError, match="no data"):
+        compute_stat("x", days, "snowfall_days_pct", 2025)
+
+
+def test_days_absent_from_the_dataset_count_as_missing():
+    days = _year()[:300]  # 65 days of 2025 not in the data at all
+    s = compute_stat("x", days, "snowfall_days_pct", 2025)
+    assert s.days_with_data == 300 and s.missing_days == 65

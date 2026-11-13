@@ -20,7 +20,10 @@ class EchoLlm:
 
 @pytest.fixture
 def fake_llm(monkeypatch):
+    from weather_risk.api.limits import RateLimiter
+
     monkeypatch.setattr(app_module, "get_llm", lambda: EchoLlm())
+    monkeypatch.setattr(app_module, "limiter", RateLimiter(per_minute=1000, per_day=1000))
 
 
 def test_index_serves_the_chat_page():
@@ -54,3 +57,17 @@ def test_same_conversation_id_is_kept(fake_llm):
     second = client.post("/api/chat", json={"conversation_id": first["conversation_id"],
                                             "message": "again"}).json()
     assert second["conversation_id"] == first["conversation_id"]
+
+
+def test_oversized_body_is_rejected_before_parsing(fake_llm):
+    r = client.post("/api/chat", content=b'{"message": "' + b"x" * 20_000 + b'"}',
+                    headers={"Content-Type": "application/json"})
+    assert r.status_code == 413
+
+
+def test_rate_limit_returns_429(fake_llm, monkeypatch):
+    from weather_risk.api.limits import RateLimiter
+
+    monkeypatch.setattr(app_module, "limiter", RateLimiter(per_minute=1, per_day=100))
+    assert client.post("/api/chat", json={"message": "hi"}).status_code == 200
+    assert client.post("/api/chat", json={"message": "hi"}).status_code == 429

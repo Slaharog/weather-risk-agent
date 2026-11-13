@@ -14,8 +14,7 @@ def trim(items: list[dict], max_turns: int = MAX_TURNS) -> list[dict]:
 
     Cutting only at user-message boundaries never separates a tool call from its result.
     """
-    starts = [i for i, item in enumerate(items) if item.get("role") == "user"
-              and not str(item.get("content", "")).startswith("Your last answer did not match")]
+    starts = [i for i, item in enumerate(items) if item.get("role") == "user"]
     if len(starts) <= max_turns:
         return items
     return items[starts[-max_turns]:]

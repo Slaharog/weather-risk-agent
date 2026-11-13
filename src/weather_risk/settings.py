@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-6.1-sol"
     openai_reasoning_effort: str = "low"
 
+    # Budget protection for /api/chat once public (per client per minute, all clients per day).
+    chat_per_minute: int = 10
+    chat_per_day: int = 500
+
     # Refreshed data goes to data_dir; the committed snapshot lives in seed_dir.
     data_dir: Path = PROJECT_ROOT / "data" / "live"
     seed_dir: Path = PROJECT_ROOT / "data" / "seed"

@@ -71,3 +71,18 @@ def test_flood_uses_the_worse_of_inland_and_coastal_flooding():
     # inland 1.0 / 4.0 = 25; coastal 3.0 / 4.0 = 75 -> coastal wins
     assert values["fema_flood"].score == pytest.approx(75.0)
     assert "coastal" in values["fema_flood"].label.lower()
+
+
+def test_engine_reports_a_hub_whose_county_is_missing_from_the_snapshot():
+    from weather_risk.data.models import NriDataset, WeatherDataset
+    from weather_risk.data.store import Snapshot
+    from weather_risk.hubs import load_hubs
+    from weather_risk.scoring.engine import DataError, Engine
+
+    hub = load_hubs()[0]
+    snap = Snapshot(weather={hub.id: WeatherDataset(hub_id=hub.id, start_date=date(2020, 1, 1),
+                                                     end_date=date(2020, 1, 1), retrieved_at="x",
+                                                     days=[])},
+                    nri=NriDataset(version="v", retrieved_at="x", counties=[]))
+    with pytest.raises(DataError, match=hub.county_fips):
+        Engine([hub], snap)

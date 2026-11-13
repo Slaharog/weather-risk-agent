@@ -7,6 +7,7 @@ One user message:
 4. Build the response: the model's narrative + tables and sources built by code from tool results.
 """
 
+import threading
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -42,6 +43,8 @@ class Conversation:
     id: str
     items: list[dict] = field(default_factory=list)  # user messages, model items, tool results
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    # Serializes turns on one conversation, so two concurrent requests cannot lose a turn.
+    lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
 
     @classmethod
     def new(cls) -> "Conversation":
@@ -62,6 +65,7 @@ def run_turn(conversation: Conversation, message: str, llm: LlmClient, tools: To
     items = [*conversation.items, {"role": "user", "content": message}]
     outcomes: list[ToolOutcome] = []
     retried = False
+    discarded: list[dict] = []  # invalid answer + retry prompt: sent once, never saved
 
     def fail(error: str) -> ChatResponse:
         # The failed turn is not saved, so the conversation history stays clean.
@@ -87,17 +91,25 @@ def run_turn(conversation: Conversation, message: str, llm: LlmClient, tools: To
             if retried:
                 return fail(INVALID_ANSWER_ERROR)
             retried = True
-            items.append({"role": "user", "content":
-                          "Your last answer did not match the required JSON schema: "
-                          f"{exc.errors(include_url=False)}. Reply again with a valid answer."})
+            retry_prompt = {"role": "user", "content":
+                            "Your last answer did not match the required JSON schema: "
+                            f"{exc.errors(include_url=False)}. Reply again with a valid answer."}
+            items.append(retry_prompt)
+            discarded += [*turn.items, retry_prompt]
             continue
 
+        # Missing data is reported by code, not left to the model (data-model.md section 5).
         ok = [o for o in outcomes if o.ok]
-        if answer.confidence.level == "high" and any(o.missing_data for o in ok):
-            answer.confidence.level = "medium"  # code, not the model, enforces this rule
-            answer.confidence.reason += " (lowered: some data was missing)"
+        missing = sorted({m for o in ok for m in o.missing})
+        if missing:
+            answer.limitations.append(
+                "Some data was unavailable; affected scores use the remaining indicators "
+                f"with re-normalized weights: {', '.join(missing)}.")
+            if answer.confidence.level == "high":
+                answer.confidence.level = "medium"
+                answer.confidence.reason += " (lowered: some data was missing)"
 
-        conversation.items = items
+        conversation.items = [i for i in items if not any(i is d for d in discarded)]
         conversation.updated_at = datetime.now(UTC)
         return ChatResponse(
             conversation_id=conversation.id,

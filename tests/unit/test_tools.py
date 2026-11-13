@@ -57,3 +57,14 @@ def test_engine_errors_become_tool_errors(tools):
     out = tools.execute("get_weather_stat", json.dumps(
         {"hub_id": "denver", "stat": "snowfall_days_pct", "year": 1990}))
     assert not out.ok and "Invalid arguments" in out.result["error"]
+
+
+def test_missing_flag_only_considers_the_requested_hazard(tools, monkeypatch):
+    hs = tools.engine.scores["minneapolis"].hazards["winter"]
+    monkeypatch.setattr(hs, "missing", ["heavy_snow_days"])
+    hurricane = run(tools, "rank_hubs", hazard="hurricane", region=None, limit=None)
+    winter = run(tools, "rank_hubs", hazard="winter", region=None, limit=None)
+    overall = run(tools, "rank_hubs", hazard="overall", region=None, limit=None)
+    assert hurricane.missing == []
+    assert winter.missing == ["minneapolis: heavy_snow_days"]
+    assert overall.missing == ["minneapolis: heavy_snow_days"]

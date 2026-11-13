@@ -71,7 +71,7 @@ class ToolOutcome:
     result: dict
     table: Table | None = None
     sources: list[dict] = field(default_factory=list)
-    missing_data: bool = False
+    missing: list[str] = field(default_factory=list)  # e.g. "minneapolis: heavy_snow_days"
 
     @classmethod
     def failure(cls, tool: str, message: str, arguments: dict | None = None) -> "ToolOutcome":
@@ -111,11 +111,21 @@ class ToolRegistry:
             return ToolOutcome.failure(name, str(exc.args[0]), raw)
 
     def _outcome(self, name: str, args: BaseModel, data, table: Table, notes: list[str],
-                 missing: bool = False) -> ToolOutcome:
+                 missing: list[str] | None = None) -> ToolOutcome:
         sources = self.engine.data_sources()
         return ToolOutcome(ok=True, tool=name, arguments=args.model_dump(mode="json"),
                            result={"data": data, "notes": notes, "sources": sources},
-                           table=table, sources=sources, missing_data=missing)
+                           table=table, sources=sources, missing=missing or [])
+
+    def _missing(self, hub_ids: list[str], metrics: list[str]) -> list[str]:
+        """Missing score components, only for the hazards actually shown ('overall' = all five)."""
+        out = []
+        for hub_id in hub_ids:
+            hazards = self.engine.scores[hub_id].hazards
+            for h, hs in hazards.items():
+                if "overall" in metrics or h.value in metrics:
+                    out += [f"{hub_id}: {m}" for m in hs.missing]
+        return sorted(set(out))
 
     # ---------- tools ----------
 
@@ -150,8 +160,7 @@ class ToolRegistry:
                   for d in data])
         notes = ["Tied hubs share a score; order among them is alphabetical."] if any(
             r.tied for r in rows) else []
-        missing = any(e.scores[r.hub_id].hazards[h].missing for r in rows
-                      for h in e.scores[r.hub_id].hazards)
+        missing = self._missing([r.hub_id for r in rows], [args.hazard])
         return self._outcome("rank_hubs", args, data, table, notes, missing)
 
     def get_hub_breakdown(self, args: BreakdownArgs) -> ToolOutcome:
@@ -172,7 +181,7 @@ class ToolRegistry:
                 for h in b.hazards])
         notes = ["Overall = average of the five hazard scores. Each hazard score = sum of its "
                  "components' contributions."]
-        missing = any(h.missing for h in b.hazards)
+        missing = self._missing([b.hub_id], ["overall"])
         return self._outcome("get_hub_breakdown", args, data, table, notes, missing)
 
     def compare_hubs(self, args: CompareArgs) -> ToolOutcome:
@@ -192,8 +201,7 @@ class ToolRegistry:
             columns=["Hazard", *[r.name for r in c.rows], "Most exposed"],
             rows=[[_metric_name(m), *[r1(r.scores[m].score) for r in c.rows],
                    names.get(c.most_exposed[m], "tie")] for m in c.metrics])
-        missing = any(e.scores[r.hub_id].hazards[h].missing for r in c.rows
-                      for h in e.scores[r.hub_id].hazards)
+        missing = self._missing([r.hub_id for r in c.rows], c.metrics)
         return self._outcome("compare_hubs", args, data, table, [], missing)
 
     def get_weather_stat(self, args: StatArgs) -> ToolOutcome:
@@ -210,7 +218,8 @@ class ToolRegistry:
                    s.days_with_data, s.missing_days, s.definition]])
         notes = ["Source: ERA5 reanalysis at about 25 km resolution; values are grid estimates, "
                  "not station readings."]
-        return self._outcome("get_weather_stat", args, data, table, notes, s.missing_days > 0)
+        missing = [f"{hub.id}: {s.missing_days} days without data in {args.year}"] if s.missing_days else []
+        return self._outcome("get_weather_stat", args, data, table, notes, missing)
 
 
 TOOLS: dict[str, ToolDef] = {

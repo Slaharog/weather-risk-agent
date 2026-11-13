@@ -9,7 +9,7 @@ Two layers of enforcement:
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from weather_risk.hubs import Region, load_hubs
 from weather_risk.scoring.stats import FIRST_YEAR, LAST_YEAR, STATS
@@ -80,6 +80,14 @@ class AgentAnswer(_Strict):
     confidence: Confidence
     clarifying_question: str | None = Field(description="Only when answer_type is 'clarification'.")
 
+    @model_validator(mode="after")
+    def _question_matches_type(self) -> "AgentAnswer":
+        if self.answer_type == "clarification" and not (self.clarifying_question or "").strip():
+            raise ValueError("answer_type 'clarification' requires a clarifying_question")
+        if self.answer_type != "clarification":
+            self.clarifying_question = None  # ignore a stray question on other answer types
+        return self
+
 
 # ---------- what the API returns (built by code, not by the LLM) ----------
 
@@ -116,9 +124,7 @@ def _clean(node: Any) -> Any:
         return node
     out = {}
     for key, value in node.items():
-        if key == "properties":
-            out[key] = {name: _clean(sub) for name, sub in value.items()}
-        elif key == "$defs":
+        if key in ("properties", "$defs"):  # maps of name -> schema
             out[key] = {name: _clean(sub) for name, sub in value.items()}
         elif key in _KEEP:
             out[key] = _clean(value)

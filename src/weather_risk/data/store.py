@@ -89,7 +89,15 @@ def load_snapshot(seed_dir: Path, data_dir: Path, hub_ids: Iterable[str]) -> Sna
     return Snapshot(weather=weather, nri=nri)
 
 
+COMPLETE_MARKER = "refresh_complete.txt"
+
+
+def mark_refresh_complete(root: Path, when: str) -> None:
+    """Written once at the END of `wra refresh`, after every source was saved."""
+    _atomic_write(root / COMPLETE_MARKER, when)
+
+
 def snapshot_version(seed_dir: Path, data_dir: Path) -> float:
-    """Changes whenever either manifest is rewritten; used to reload scores after a refresh."""
-    paths = [seed_dir / "manifest.json", data_dir / "manifest.json"]
+    """Changes only when a refresh has finished, so the server never loads a half-done refresh."""
+    paths = [seed_dir / COMPLETE_MARKER, data_dir / COMPLETE_MARKER]
     return max((p.stat().st_mtime for p in paths if p.exists()), default=0.0)
