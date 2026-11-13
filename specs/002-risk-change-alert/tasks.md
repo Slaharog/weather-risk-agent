@@ -124,7 +124,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
   - the demo gives exactly 2 alerts, Dallas heat +7.5 and Houston hurricane −5.0, all `is_demo`;
   - afterwards, `GET /api/rankings` is byte-identical to before;
   - a following real check (fake fetch, unchanged data) gives 0 alerts.
-- [ ] T219 [US4] Create `scripts/alert_demo.py <base-url> [--check]`, per contracts/cli.md: it reads `ALERT_ADMIN_TOKEN` through `get_settings()`, uses an SSL context from the OS store, never prints the token, and exits 1 with no token and 2 on a non-200 response. Generate the token into `.env` with `secrets.token_urlsafe(32)`, without printing it (append only if absent).
+- [X] T219 [US4] Create `scripts/alert_demo.py <base-url> [--check]`, per contracts/cli.md: it reads `ALERT_ADMIN_TOKEN` through `get_settings()`, uses an SSL context from the OS store, never prints the token, and exits 1 with no token and 2 on a non-200 response. Generate the token into `.env` with `secrets.token_urlsafe(32)`, without printing it (append only if absent).
 
 ---
 
