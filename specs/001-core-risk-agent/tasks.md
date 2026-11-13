@@ -168,8 +168,8 @@ Single project: `src/weather_risk/`, `tests/`, `evals/`, `config/`, `data/` at r
 
 ## Phase 10: Polish & Cross-Cutting Concerns
 
-- [ ] T057 Write `README.md` (FR-028): what it does; setup and run; `wra` commands; refresh; evals and the latest results; the scoring definition with every weight, threshold, and cap; statistic definitions; data sources, periods, NRI version, Open-Meteo CC-BY attribution and non-commercial terms; a statement that all answers come from the committed snapshot unless refreshed, with the snapshot's retrieval date (constitution Principle VI); assumptions; known limitations (ERA5 smoothing, county-level hazards, exposure not loss); how AI was used
-- [ ] T058 [P] Write `docs/architecture.md`: components and how they talk (diagram), repository structure, data storage choice (JSON now, SQLite with alerts), request flow of one chat message
+- [X] T057 Write `README.md` (FR-028): what it does; setup and run; `wra` commands; refresh; evals and the latest results; the scoring definition with every weight, threshold, and cap; statistic definitions; data sources, periods, NRI version, Open-Meteo CC-BY attribution and non-commercial terms; a statement that all answers come from the committed snapshot unless refreshed, with the snapshot's retrieval date (constitution Principle VI); assumptions; known limitations (ERA5 smoothing, county-level hazards, exposure not loss); how AI was used
+- [X] T058 [P] Write `docs/architecture.md`: components and how they talk (diagram), repository structure, data storage choice (JSON now, SQLite with alerts), request flow of one chat message
 - [ ] T059 Run the `ai-generated-code-auditor` agent over `src/` (secrets, prompt-injection sinks, input limits); fix confirmed findings
 - [ ] T060 Run the `code-reviewer` agent over the feature diff; fix confirmed findings; `uv run ruff check` and `uv run pytest` green
 - [ ] T061 Run quickstart.md V1-V6 from a fresh clone (SC-007: under 10 minutes to first answer) and record the outcome in `specs/001-core-risk-agent/quickstart.md` notes
