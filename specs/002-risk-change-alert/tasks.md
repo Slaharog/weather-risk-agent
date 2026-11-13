@@ -58,7 +58,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
   - retention keeps score records of the newest 30 real checks only;
   - data survives closing and reopening the file (SC-203);
   - `is_due(now, interval_hours)` is True with no real check, and False until `last real started_at + interval`.
-- [ ] T207 Implement `src/weather_risk/alerts/history.py` with stdlib `sqlite3` and raw SQL, using the tables from data-model.md §3 (`checks`, `score_records`, `alerts`), `CREATE TABLE IF NOT EXISTS`, and a new connection per operation. Make T206 pass.
+- [X] T207 Implement `src/weather_risk/alerts/history.py` with stdlib `sqlite3` and raw SQL, using the tables from data-model.md §3 (`checks`, `score_records`, `alerts`), `CREATE TABLE IF NOT EXISTS`, and a new connection per operation. Make T206 pass.
 
 **Checkpoint**: detection and history are proven by tests. Nothing is wired yet, and the app is unchanged.
 
