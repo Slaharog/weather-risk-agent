@@ -70,7 +70,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
 
 **Independent Test**: with a recorded previous check and changed data, one check records and delivers exactly the expected alerts (fake transport).
 
-- [ ] T208 [P] [US1] TDD: write `tests/unit/test_alert_notify.py` (failing first), covering:
+- [X] T208 [P] [US1] TDD: write `tests/unit/test_alert_notify.py` (failing first), covering:
   - `build_payload(alert, threshold)` gives a `text` that starts with `[DEMO] ` only for demo alerts, says "rose" or "fell", and contains old, new and change exactly as stored, plus the data retrieval dates; the `alert` object has the fields from contracts/webhook.md.
   - `deliver(url, payload, client)` with an `httpx.MockTransport`: a 200 gives `delivered`; 500, 500, 200 gives `delivered` after 3 attempts; three 500s give `failed` / `HTTP 500`; a timeout gives `failed` / `ConnectTimeout`-style class name. The URL never appears in the returned error, and (with `caplog`) never in any log line from `deliver` or `log_alert` (SC-206).
 - [ ] T209 [US1] Implement `src/weather_risk/alerts/notify.py`: `build_payload`, and `deliver` with a 5 s timeout, at most 3 attempts and 1 s / 2 s waits (the wait function is injectable so tests don't sleep). Also `log_alert(alert)`, which logs the `text` at WARNING and never the URL. Make T208 pass.
