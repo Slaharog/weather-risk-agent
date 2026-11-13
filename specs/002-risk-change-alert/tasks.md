@@ -130,7 +130,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
 
 ## Phase 7: Polish & Cross-Cutting
 
-- [ ] T220 Run the full verification, recording the output:
+- [X] T220 Run the full verification, recording the output:
   - `uv run python -m pytest`, all green;
   - `uv run ruff check src scripts tests`;
   - `uv run python -m weather_risk eval`, expecting 20/20 (FR-218, SC-205). Run this **before** the local `alerts check`, which writes `data/live`, so the evals run on the seed;
