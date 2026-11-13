@@ -6,6 +6,9 @@ An AI agent that helps logistics analysts decide which US distribution hubs are 
 - **Conversational agent.** An OpenAI model answers questions in plain language. It uses five read-only tools that call the engine, and returns a strict JSON answer.
 - **One FastAPI service** serves the chat page, the agent API, and LLM-free ranking endpoints.
 - **Evals.** A 20-case eval set runs with one command. The latest result is 20/20 on `gpt-6.1-sol` (details in [Evaluation](#evaluation)).
+- **Risk-change alerts (bonus).** A scheduled job re-fetches the data, recomputes every score, and alerts when a hub's score moves by at least 2 points. Alerts go to a webhook and are listed on a read-only page (details in [Risk-change alerts](#risk-change-alerts)).
+
+**Live demo:** https://weather-risk-agent-production.up.railway.app (chat), [`/alerts`](https://weather-risk-agent-production.up.railway.app/alerts) (alert list), [`/docs`](https://weather-risk-agent-production.up.railway.app/docs) (API). It is deployed on Railway as one container with a volume.
 
 ```
 Which hubs in the Midwest are most exposed to winter disruption?   -> rank_hubs(winter, Midwest)
@@ -14,7 +17,7 @@ What percentage of days in Denver last year had snowfall?          -> get_weathe
 Why is the Dallas hub's weather disruption risk high?              -> get_hub_breakdown(dallas)
 ```
 
-Design document: [`docs/architecture.md`](docs/architecture.md). Decision log with every trade-off: [`docs/decisions.md`](docs/decisions.md). Spec, plan and tasks: [`specs/001-core-risk-agent/`](specs/001-core-risk-agent/). AI session log: [`docs/session/`](docs/session/).
+Design document: [`docs/architecture.md`](docs/architecture.md). Decision log with every trade-off: [`docs/decisions.md`](docs/decisions.md). Specs, plans and tasks: [`specs/001-core-risk-agent/`](specs/001-core-risk-agent/), [`specs/002-risk-change-alert/`](specs/002-risk-change-alert/). AI session log: [`docs/session/`](docs/session/).
 
 ---
 
@@ -38,7 +41,10 @@ uv run wra serve              # open http://localhost:8000
 | `uv run wra serve` | API and chat page on port 8000 | For chat |
 | `uv run wra eval [--model NAME] [--case ID] [--judge]` | Runs the eval set, writes `evals/results/*.json` | Yes |
 | `uv run wra refresh [--source weather\|nri\|all]` | Fetches fresh data from the public APIs into `data/live/` | No |
-| `uv run python -m pytest` | 133 unit and smoke tests (no network, no LLM) | No |
+| `uv run wra alerts check` | Runs a real risk-change check now (fetches live data, about 1 minute) | No |
+| `uv run wra alerts demo` | Demo alerts from simulated previous scores; real data untouched | No |
+| `uv run wra alerts list` | The last check and the newest alerts | No |
+| `uv run python -m pytest` | 200 unit and smoke tests (no network, no LLM) | No |
 
 `python -m weather_risk <command>` is equivalent to `wra <command>`.
 
@@ -54,6 +60,9 @@ uv run wra serve              # open http://localhost:8000
 | `GET /api/rankings?hazard=winter&region=Midwest` | LLM-free ranking |
 | `GET /api/hubs/{hub_id}/breakdown` | LLM-free score breakdown |
 | `GET /api/hubs`, `GET /api/health` | Hub list; data snapshot and model info |
+| `GET /api/alerts` | Last check and recent alerts (public, LLM-free) |
+| `POST /api/alerts/check`, `POST /api/alerts/demo` | Trigger a real check or the demo; need `Authorization: Bearer <ALERT_ADMIN_TOKEN>` |
+| `GET /alerts` | Read-only alerts page, linked from the chat header |
 | `GET /docs` | Interactive OpenAPI docs |
 
 ---
@@ -130,6 +139,44 @@ The weights and caps are judgment calls. They are documented here and in [`docs/
 
 ---
 
+## Risk-change alerts
+
+Spec, plan and tasks: [`specs/002-risk-change-alert/`](specs/002-risk-change-alert/).
+
+**What triggers an alert.** Scores come only from data, so a score changes only when the data does: a new FEMA release, revised weather history, or a change to the hub list or weights. A check works like this:
+1. **Fetch.** It fetches live data exactly like `wra refresh`.
+2. **Recompute.** It recomputes every hub's overall score and five hazard scores with the same engine, rounded to one decimal as displayed.
+3. **Compare.** It compares them with the last successful real check. A move of **at least 2.0 points** (`ALERT_THRESHOLD`) is an alert. The first check only records a baseline.
+4. **Record and deliver.** Each alert is stored in SQLite, logged, and POSTed to `ALERT_WEBHOOK_URL`, with a 5 s timeout and 3 attempts. The message has a readable `text` line (Slack-compatible) plus structured fields. No LLM is involved anywhere.
+
+**When it runs.**
+- On the deployed service, an in-process scheduler runs a check every `ALERT_INTERVAL_HOURS` (24). Whether a check is due is read from the database, so a redeploy neither skips nor repeats one.
+- Locally the scheduler is off by default (`0`), so `wra serve` and the evals never fetch live data by surprise.
+- On demand: `wra alerts check`, or `POST /api/alerts/check` with the operator token.
+
+**Demo.** Real data rarely changes, so the demo compares today's real scores with a *simulated* previous set: Dallas heat 7.5 points lower and Houston hurricane 5.0 points higher. It produces exactly 2 alerts, labeled "demo" everywhere: Dallas heat 76.6 → 84.1 and Houston hurricane 65.1 → 60.1. The overall scores move less than 2 points, so they don't alert, which also shows the threshold working. The demo writes no score history, and rankings and chat are byte-for-byte unchanged afterwards (tested).
+
+```bash
+uv run python scripts/alert_demo.py https://weather-risk-agent-production.up.railway.app
+# reads ALERT_ADMIN_TOKEN from .env, triggers the demo, prints the 2 alerts; then open /alerts
+```
+
+**Safety.**
+- The webhook URL and the admin token come only from environment variables (`SecretStr`).
+- The URL is never returned or logged. `httpx` would log full request URLs at INFO level, so its logger is held at WARNING, and a test enforces this.
+- `GET /api/alerts` shows only `webhook_configured: true|false`.
+- Trigger endpoints use a constant-time token check and are disabled when no token is set. They are limited to 2 per minute and 50 per day.
+- The chat agent has no tool that can reach alerts.
+
+| Variable | Default | Deployed |
+|---|---|---|
+| `ALERT_INTERVAL_HOURS` | `0` (off) | `24` |
+| `ALERT_THRESHOLD` | `2.0` | `2.0` |
+| `ALERT_WEBHOOK_URL` | unset (recorded and logged only) | a webhook.site URL |
+| `ALERT_ADMIN_TOKEN` | unset (trigger endpoints disabled) | a random 43-character token |
+
+---
+
 ## Evaluation
 
 `uv run wra eval` runs [`evals/cases.yaml`](evals/cases.yaml), 20 cases in 8 categories:
@@ -150,7 +197,8 @@ An optional LLM judge (`--judge`) scores clarity and is reported separately, nev
 
 | Run | Checker | Pass | Ungrounded numbers | p50 / p95 latency | Tokens (whole set) |
 |---|---|---|---|---|---|
-| **`gpt-6.1-sol` (default)** | **strict (current)** | **20/20** | **0** | 6.0 s / 13.8 s | 93k in / 4.1k out |
+| **`gpt-6.1-sol` (default), after feature 002** | **strict (current)** | **20/20** | **0** | 6.7 s / 15.4 s | 93k in / 4.1k out |
+| `gpt-6.1-sol`, before feature 002 | strict | 20/20 | 0 | 6.0 s / 13.8 s | 93k in / 4.1k out |
 | `gpt-6.1-sol`, two earlier runs | lenient (first version) | 20/20, 20/20 | 0 | about 6.5 s / 15 s | 93k in / 4.1k out; judge clarity 4.9/5 |
 | `gpt-6-luna` (cheaper) | lenient | 18/20 (19/20 after an eval phrasing fix) | 0 | 4.6 s / 64.8 s | 99k in / 3.7k out |
 
@@ -178,6 +226,11 @@ It was rewritten and the set was rerun; the default model still passes 20/20. Th
 - **Judgment calls.** The weights and caps are expert judgment. They are not calibrated against actual hub shutdowns, because no outage history was provided. With such data, I would fit the weights to past disruptions.
 - **Open-Meteo license.** Its free tier is non-commercial. A production deployment would need its commercial plan.
 - **Memory.** Conversations live in memory, so they disappear on restart and are not shared across server instances.
+- **Alerts.**
+  - Each check compares with the previous one, so a slow drift of under 2 points per check never alerts.
+  - A check missed while the service is down is not caught up; the next one still compares with the last recorded scores.
+  - An alert being sent when the process crashes stays `pending`.
+  - A second `wra alerts check` process started at the same moment is not blocked by the in-process lock. SQLite keeps the history consistent.
 - **Eval size.** The eval set is small (20 hand-written cases, one run each). Substring checks for refusals can miss valid wordings; this happened once and was fixed in the eval, not the prompt.
 
 ## How AI was used
