@@ -157,3 +157,6 @@ Two read-only review agents ran on the finished alert code: a security reviewer 
 - **Scheduler:** check #1 ran by itself after startup and recorded a baseline (16 hubs, 0 alerts, no fetch failures, 3 min 50 s).
 - **Demo:** the first try returned 409 because check #1 was still running, which is the intended lock behavior. After it finished, demo check #2 raised and delivered exactly 2 alerts: Dallas heat 76.6 → 84.1 and Houston hurricane 65.1 → 60.1.
 - **Auth:** both trigger endpoints return 403 with no token and with a wrong token.
+- **Webhook:** the user confirmed that both `[DEMO]` messages arrived on webhook.site.
+- **Persistence (SC-203):** after the next push redeployed the service, `GET /api/alerts` still showed check #2 and its 2 alerts. No duplicate scheduled check ran, because the "due" decision is read from SQLite rather than from process memory.
+- **Voice:** the user tried it with a real microphone in Chrome on the https deployment, and it works. This completes the one check the scripted fake-recognizer test could not cover.

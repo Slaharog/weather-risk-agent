@@ -180,6 +180,9 @@ uv run python scripts/alert_demo.py https://weather-risk-agent-production.up.rai
 - The first scheduled check after the deploy recorded a baseline: 16 hubs, 0 alerts, no fetch failures, about 4 minutes.
 - `scripts/alert_demo.py` then produced exactly the 2 demo alerts, both delivered to the webhook and shown on `/alerts`. A demo started while that check was running got `409`, as designed.
 - `POST /api/alerts/check` and `/api/alerts/demo` return `403` with no token or a wrong one.
+- Both webhook messages arrived on webhook.site.
+- After another redeploy, the checks and alerts were still there (SQLite on the volume), and no extra scheduled check ran, because "due" is read from the database.
+- Voice input was tried with a real microphone in Chrome on the deployed site, and it works.
 
 ---
 
