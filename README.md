@@ -182,7 +182,7 @@ It was rewritten and the set was rerun; the default model still passes 20/20. Th
 
 ## How AI was used
 
-The whole project was built with Claude Code (Claude Opus 5.5) using spec-driven development (GitHub Spec Kit): a constitution, then a spec, clarifications, a plan with research, tasks, a consistency analysis, and test-first implementation. I approved every spec, plan, and scoring decision. The full session, including the plan and every decision, is in [`docs/session/`](docs/session/), and the reasoning is summarized in [`docs/decisions.md`](docs/decisions.md).
+The whole project was built with Claude Code (Claude Opus 5.5) using spec-driven development (GitHub Spec Kit): a constitution, then a spec, clarifications, a plan with research, tasks, a consistency analysis, and test-first implementation. I approved every spec, plan, and scoring decision. The full session, including the plan and every decision, is in [`docs/session/`](docs/session/): `session.md` is the readable version, and `raw/` holds the original transcripts, with keys and e-mails redacted. Regenerate it with `python scripts/export_session.py`. The reasoning is summarized in [`docs/decisions.md`](docs/decisions.md).
 
 Examples of where the AI's first approach changed after review:
 - The FEMA percentile-rank formula was replaced after real data showed it inflated rare hazards.

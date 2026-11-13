@@ -173,7 +173,7 @@ Single project: `src/weather_risk/`, `tests/`, `evals/`, `config/`, `data/` at r
 - [X] T059 Run the `ai-generated-code-auditor` agent over `src/` (secrets, prompt-injection sinks, input limits); fix confirmed findings
 - [X] T060 Run the `code-reviewer` agent over the feature diff; fix confirmed findings; `uv run ruff check` and `uv run pytest` green
 - [X] T061 Run quickstart.md V1-V6 from a fresh clone (SC-007: under 10 minutes to first answer) and record the outcome in `specs/001-core-risk-agent/quickstart.md` notes
-- [ ] T062 Export the full AI session for submission (mandatory deliverable): copy the Claude Code transcript files (`.jsonl`) for this project into `docs/session/raw/` and generate a readable Markdown version in `docs/session/session.md` (user and assistant messages, tool calls summarized); link both from the README
+- [X] T062 Export the full AI session for submission (mandatory deliverable): copy the Claude Code transcript files (`.jsonl`) for this project into `docs/session/raw/` and generate a readable Markdown version in `docs/session/session.md` (user and assistant messages, tool calls summarized); link both from the README
 
 ---
 
