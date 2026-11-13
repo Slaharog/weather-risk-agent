@@ -4,13 +4,12 @@ Exit codes: 0 success, 1 user error, 2 data or network failure.
 """
 
 import sys
-import time
 from enum import StrEnum
 
 import typer
 
-from weather_risk.data import sources, store
-from weather_risk.hubs import Region, load_hubs
+from weather_risk.data.refresh import fetch_all
+from weather_risk.hubs import Region
 from weather_risk.scoring.engine import METRICS, Engine, UnknownHub, parse_metric
 from weather_risk.settings import get_settings
 
@@ -45,35 +44,13 @@ def refresh(
     """Fetch fresh data from Open-Meteo and FEMA NRI. A failed source keeps its previous data."""
     settings = get_settings()
     root = settings.data_dir if to == Target.LIVE else settings.seed_dir
-    failures = 0
     try:
         before = {h: s.score for h, s in Engine.from_settings().scores.items()}
     except FileNotFoundError:  # first ever fetch: nothing to compare with
         before = {}
 
-    if source in (Source.WEATHER, Source.ALL):
-        for i, hub in enumerate(load_hubs()):
-            if i:
-                time.sleep(3)  # stay under Open-Meteo's per-minute limit
-            try:
-                ds = sources.fetch_weather(hub)
-                store.save_weather(root, ds)
-                typer.echo(f"weather  {hub.id:<13} ok   {len(ds.days)} days "
-                           f"{ds.start_date}..{ds.end_date}")
-            except Exception as exc:  # report and keep the previous file
-                failures += 1
-                typer.echo(f"weather  {hub.id:<13} FAILED ({exc}); previous data kept", err=True)
-
-    if source in (Source.NRI, Source.ALL):
-        try:
-            nri = sources.fetch_nri()
-            store.save_nri(root, nri)
-            typer.echo(f"nri      {len(nri.counties)} counties ok, version {nri.version}")
-        except Exception as exc:
-            failures += 1
-            typer.echo(f"nri      FAILED ({exc}); previous data kept", err=True)
-
-    store.mark_refresh_complete(root, time.strftime("%Y-%m-%dT%H:%M:%S"))
+    result = fetch_all(root, source.value, echo=lambda m: typer.echo(m, err="FAILED" in m))
+    failures = len(result.failures)
     typer.echo(f"written to {root}\n")
     try:
         engine = Engine.from_settings()

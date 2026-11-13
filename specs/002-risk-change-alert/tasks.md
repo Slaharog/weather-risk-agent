@@ -34,7 +34,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
 
 ## Phase 2: Foundational (blocks every story)
 
-- [ ] T203 Move the fetch loop out of `cli.refresh` into `src/weather_risk/data/refresh.py`: `fetch_all(root: Path, source: str = "all", echo=print) -> RefreshResult` (fields `failures: list[str]` such as `"weather:dallas"` or `"nri"`). It keeps the 3 s pause between hubs, the per-source atomic save, and the `mark_refresh_complete` at the end. `cli.refresh` calls it and keeps its exact output and exit codes. Existing tests stay green, and `wra refresh --help` is unchanged.
+- [X] T203 Move the fetch loop out of `cli.refresh` into `src/weather_risk/data/refresh.py`: `fetch_all(root: Path, source: str = "all", echo=print) -> RefreshResult` (fields `failures: list[str]` such as `"weather:dallas"` or `"nri"`). It keeps the 3 s pause between hubs, the per-source atomic save, and the `mark_refresh_complete` at the end. `cli.refresh` calls it and keeps its exact output and exit codes. Existing tests stay green, and `wra refresh --help` is unchanged.
 - [ ] T204 [P] TDD: write `tests/unit/test_alert_detect.py` (failing first), covering:
   - `watched_scores(engine)` returns 16 hubs × 6 metrics (`overall, winter, hurricane, flood, heat, severe_storms`), each `round(metric_score, 1)`.
   - `detect_changes(previous, current, threshold)`:
