@@ -78,7 +78,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
   - a module `threading.Lock`;
   - `run_check(kind, settings, fetch=fetch_all) -> CheckSummary`, following the lifecycle in data-model.md §4. If the lock is busy it raises `CheckBusy`. The fetch is injectable for tests. A scoring failure records the check as `failed` with no score records.
   - `CheckSummary` (a Pydantic model) as in contracts/http-api.md.
-- [ ] T211 [US1] Write `tests/smoke/test_alert_service.py`, using a fake fetch that writes nothing and a MockTransport webhook:
+- [X] T211 [US1] Write `tests/smoke/test_alert_service.py`, using a fake fetch that writes nothing and a MockTransport webhook:
   - the first check is a baseline with 0 alerts;
   - a second check with a monkeypatched engine score shift of +3.0 on one hub gives exactly the expected alert, recorded and delivered;
   - no webhook configured gives `not_configured`;
