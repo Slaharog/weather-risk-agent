@@ -1,0 +1,21 @@
+{
+  "latitude": 39.753952,
+  "longitude": -105.02086,
+  "timezone": "America/Denver",
+  "daily_units": {
+    "time": "iso8601",
+    "snowfall_sum": "cm",
+    "precipitation_sum": "mm",
+    "temperature_2m_max": "°C",
+    "temperature_2m_min": "°C",
+    "wind_gusts_10m_max": "km/h"
+  },
+  "daily": {
+    "time": ["2025-01-01", "2025-01-02", "2025-01-03", "2025-01-04", "2025-01-05"],
+    "snowfall_sum": [0.0, 6.3, 0.14, null, 0.25],
+    "precipitation_sum": [0.0, 5.1, 0.2, 0.0, 0.3],
+    "temperature_2m_max": [8.1, -2.4, 1.0, 4.4, 2.2],
+    "temperature_2m_min": [-7.5, -19.2, -11.0, -4.4, -6.0],
+    "wind_gusts_10m_max": [31.0, 55.4, 92.5, 20.1, 40.0]
+  }
+}
