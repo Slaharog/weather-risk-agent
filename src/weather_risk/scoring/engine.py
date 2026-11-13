@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from weather_risk.data.models import NRI_SOURCE, WEATHER_SOURCE, DailyWeather, NriCounty
 from weather_risk.data.store import Snapshot
-from weather_risk.hubs import Hub
+from weather_risk.hubs import Hub, Region
 from weather_risk.scoring.indicators import (
     OBSERVED_INDICATORS,
     annual_rate,
@@ -145,6 +145,48 @@ def overall_score(hub_id: str, hazards: dict[Hazard, HazardScore]) -> OverallSco
                         score=sum(h.score for h in hazards.values()) / len(hazards))
 
 
+# ---------- ranking ----------
+
+OVERALL = "overall"
+METRICS = (OVERALL, *(h.value for h in Hazard))
+
+
+def parse_metric(metric: str) -> str:
+    """'overall' or a hazard name; anything else is a user error."""
+    if metric not in METRICS:
+        raise ValueError(f"Unknown metric '{metric}'. Use one of: {', '.join(METRICS)}")
+    return metric
+
+
+def order_with_ties(items: list[tuple[str, float]]) -> list[tuple[str, int, bool]]:
+    """Sort (hub_id, score) by score descending, ties broken by hub id alphabetically.
+
+    Returns (hub_id, rank, tied). Tied hubs keep distinct ranks in tie-break order and are
+    flagged, so the table can mark them.
+    """
+    ordered = sorted(items, key=lambda x: (-x[1], x[0]))
+    counts: dict[float, int] = {}
+    for _, score in items:
+        counts[score] = counts.get(score, 0) + 1
+    return [(hub, i + 1, counts[score] > 1) for i, (hub, score) in enumerate(ordered)]
+
+
+class Driver(BaseModel):
+    indicator: str  # indicator key, or the hazard name for the overall ranking
+    label: str
+    contribution: float
+
+
+class RankRow(BaseModel):
+    rank: int
+    hub_id: str
+    name: str
+    region: str
+    score: float
+    tied: bool
+    top_drivers: list[Driver]
+
+
 # ---------- the engine ----------
 
 class Engine:
@@ -169,6 +211,36 @@ class Engine:
 
         s, hubs = get_settings(), load_hubs()
         return cls(hubs, load_snapshot(s.seed_dir, s.data_dir, [h.id for h in hubs]))
+
+    def metric_score(self, hub_id: str, metric: str) -> float:
+        s = self.scores[hub_id]
+        return s.score if metric == OVERALL else s.hazards[Hazard(metric)].score
+
+    def drivers(self, hub_id: str, metric: str, n: int = 2) -> list[Driver]:
+        s = self.scores[hub_id]
+        if metric == OVERALL:
+            weight = 1 / len(s.hazards)
+            ranked = sorted(s.hazards.values(), key=lambda h: -h.score)[:n]
+            return [Driver(indicator=h.hazard.value, label=h.hazard.value.replace("_", " "),
+                           contribution=weight * h.score) for h in ranked]
+        comps = sorted(s.hazards[Hazard(metric)].components, key=lambda c: -c.contribution)[:n]
+        return [Driver(indicator=c.indicator, label=c.label, contribution=c.contribution)
+                for c in comps]
+
+    def rank_hubs(self, metric: str, region: Region | None = None,
+                  limit: int | None = None) -> list[RankRow]:
+        metric = parse_metric(metric)
+        if limit is not None and not 1 <= limit <= len(self.hubs):
+            raise ValueError(f"limit must be between 1 and {len(self.hubs)}")
+        ids = [h for h, hub in self.hubs.items() if region is None or hub.region == region]
+        ordered = order_with_ties([(h, self.metric_score(h, metric)) for h in ids])
+        rows = [
+            RankRow(rank=rank, hub_id=h, name=self.hubs[h].name, region=self.hubs[h].region.value,
+                    score=self.metric_score(h, metric), tied=tied,
+                    top_drivers=self.drivers(h, metric))
+            for h, rank, tied in ordered
+        ]
+        return rows[:limit] if limit else rows
 
     def data_sources(self) -> list[dict]:
         weather = list(self.snapshot.weather.values())

@@ -3,13 +3,15 @@
 Exit codes: 0 success, 1 user error, 2 data or network failure.
 """
 
+import sys
 import time
 from enum import StrEnum
 
 import typer
 
 from weather_risk.data import sources, store
-from weather_risk.hubs import load_hubs
+from weather_risk.hubs import Region, load_hubs
+from weather_risk.scoring.engine import METRICS, Engine, parse_metric
 from weather_risk.settings import get_settings
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, help="Weather Risk Intelligence Agent")
@@ -18,6 +20,10 @@ app = typer.Typer(no_args_is_help=True, add_completion=False, help="Weather Risk
 @app.callback()
 def main() -> None:
     """Weather Risk Intelligence Agent."""
+    # Windows consoles default to a legacy code page; print units like °C correctly.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
 
 
 class Source(StrEnum):
@@ -40,6 +46,10 @@ def refresh(
     settings = get_settings()
     root = settings.data_dir if to == Target.LIVE else settings.seed_dir
     failures = 0
+    try:
+        before = {h: s.score for h, s in Engine.from_settings().scores.items()}
+    except FileNotFoundError:  # first ever fetch: nothing to compare with
+        before = {}
 
     if source in (Source.WEATHER, Source.ALL):
         for i, hub in enumerate(load_hubs()):
@@ -63,9 +73,50 @@ def refresh(
             failures += 1
             typer.echo(f"nri      FAILED ({exc}); previous data kept", err=True)
 
-    typer.echo(f"written to {root}")
+    typer.echo(f"written to {root}\n")
+    try:
+        engine = Engine.from_settings()
+    except FileNotFoundError:
+        typer.echo("Snapshot incomplete; cannot recompute scores yet.", err=True)
+        raise typer.Exit(code=2) from None
+    _print_ranking(engine, "overall", engine.rank_hubs("overall"))
+    changed = [(h, before[h], s.score) for h, s in engine.scores.items()
+               if h in before and abs(before[h] - s.score) >= 0.05]
+    typer.echo("\nChanged overall scores: " + (", ".join(
+        f"{h} {old:.1f} -> {new:.1f}" for h, old, new in changed) if changed else "none"))
     if failures:
         raise typer.Exit(code=2)
+
+
+# ---------- LLM-free views of the engine (FR-029) ----------
+
+def _print_ranking(engine: Engine, metric: str, rows) -> None:
+    typer.echo(f"{'Rank':<5}{'Hub':<18}{'Region':<11}{metric + ' score':>16}  Top drivers")
+    for r in rows:
+        drivers = "; ".join(f"{d.label.split(' (')[0]} +{d.contribution:.1f}" for d in r.top_drivers)
+        tie = "=" if r.tied else " "
+        typer.echo(f"{r.rank:<4}{tie}{r.name:<18}{r.region:<11}{r.score:>16.1f}  {drivers}")
+    _print_sources(engine)
+
+
+def _print_sources(engine: Engine) -> None:
+    typer.echo("\nSources: " + " | ".join(
+        f"{s['name']}, {s['period']} (retrieved {s['retrieved_at']})" for s in engine.data_sources()))
+
+
+@app.command()
+def rank(
+    hazard: str = typer.Option("overall", help=f"One of: {', '.join(METRICS)}"),
+    region: Region | None = typer.Option(None, help="Filter to one US Census region."),
+) -> None:
+    """Rank hubs by overall or per-hazard exposure score. No LLM involved."""
+    try:
+        metric = parse_metric(hazard)
+    except ValueError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from None
+    engine = Engine.from_settings()
+    _print_ranking(engine, metric, engine.rank_hubs(metric, region=region))
 
 
 if __name__ == "__main__":

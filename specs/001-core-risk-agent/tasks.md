@@ -70,11 +70,11 @@ Single project: `src/weather_risk/`, `tests/`, `evals/`, `config/`, `data/` at r
 
 **Independent Test**: `uv run wra rank --hazard winter --region Midwest` and `GET /api/rankings?hazard=winter&region=Midwest` list only the 7 Midwest hubs, in the same order, with the same scores.
 
-- [ ] T022 [US1] TDD: write `tests/unit/test_ranking.py`: sort by unrounded score descending; tie-break by hub `id` alphabetically; `tied` flag set on equal scores; region filter; `limit` 1-16 or none; `top_drivers` = the 2 largest contributions; hazard is one of `overall, winter, heat, flood, hurricane, severe_storms`
-- [ ] T023 [US1] Implement `rank_hubs(hazard, region, limit)` in `src/weather_risk/scoring/engine.py`
-- [ ] T024 [US1] Add `wra rank [--hazard overall] [--region ...]` to `src/weather_risk/cli.py`: table columns Rank, Hub, Score (1 decimal), Top driver; data sources footer; also finish `wra refresh` output from T015: after a refresh, print the recomputed overall ranking and which hub scores changed
-- [ ] T025 [US1] Create `src/weather_risk/api/app.py` (FastAPI) with `GET /api/hubs`, `GET /api/health`, `GET /api/rankings?hazard=&region=` (`422` on unknown values) per contracts/http-api.md; engine loaded at startup and reloaded when the active `manifest.json` changes, so a refresh is picked up without a restart (FR-008)
-- [ ] T026 [P] [US1] Write smoke tests `tests/smoke/test_api_engine.py` (TestClient: rankings, hubs, health, 422) and `tests/smoke/test_cli.py` (Typer CliRunner: `rank` exit code 0 and identical output on two runs)
+- [X] T022 [US1] TDD: write `tests/unit/test_ranking.py`: sort by unrounded score descending; tie-break by hub `id` alphabetically; `tied` flag set on equal scores; region filter; `limit` 1-16 or none; `top_drivers` = the 2 largest contributions; hazard is one of `overall, winter, heat, flood, hurricane, severe_storms`
+- [X] T023 [US1] Implement `rank_hubs(hazard, region, limit)` in `src/weather_risk/scoring/engine.py`
+- [X] T024 [US1] Add `wra rank [--hazard overall] [--region ...]` to `src/weather_risk/cli.py`: table columns Rank, Hub, Score (1 decimal), Top driver; data sources footer; also finish `wra refresh` output from T015: after a refresh, print the recomputed overall ranking and which hub scores changed
+- [X] T025 [US1] Create `src/weather_risk/api/app.py` (FastAPI) with `GET /api/hubs`, `GET /api/health`, `GET /api/rankings?hazard=&region=` (`422` on unknown values) per contracts/http-api.md; engine loaded at startup and reloaded when the active `manifest.json` changes, so a refresh is picked up without a restart (FR-008)
+- [X] T026 [P] [US1] Write smoke tests `tests/smoke/test_api_engine.py` (TestClient: rankings, hubs, health, 422) and `tests/smoke/test_cli.py` (Typer CliRunner: `rank` exit code 0 and identical output on two runs)
 
 **Checkpoint**: ranking demo-able with no LLM.
 
