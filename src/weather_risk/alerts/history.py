@@ -9,7 +9,7 @@ import json
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from weather_risk.alerts.detect import Change, Scores
@@ -135,6 +135,24 @@ class History:
         return [{**dict(r), "is_demo": bool(r["is_demo"]),
                  "data_retrieved": json.loads(r["data_retrieved"])} for r in rows]
 
+    def get_alerts(self, ids: list[int]) -> list[dict]:
+        """Exactly these alerts, oldest first (not "the newest N", which another check could
+        overtake)."""
+        if not ids:
+            return []
+        marks = ",".join("?" * len(ids))  # one "?" per id; values are still bound, not formatted
+        with self._connect() as db:
+            rows = db.execute(f"SELECT * FROM alerts WHERE id IN ({marks}) ORDER BY id", ids).fetchall()
+        return [{**dict(r), "is_demo": bool(r["is_demo"]),
+                 "data_retrieved": json.loads(r["data_retrieved"])} for r in rows]
+
+    def fail_interrupted(self) -> int:
+        """Alerts still 'pending' from a check that was killed mid-send (e.g. a redeploy).
+        Called at the start of each check, under the check lock, so none is being sent now."""
+        with self._connect() as db:
+            return db.execute("UPDATE alerts SET delivery_status = 'failed', delivery_error ="
+                              " 'interrupted' WHERE delivery_status = 'pending'").rowcount
+
     def last_check(self) -> dict | None:
         with self._connect() as db:
             row = db.execute("SELECT * FROM checks ORDER BY id DESC LIMIT 1").fetchone()
@@ -152,7 +170,7 @@ class History:
                              " ORDER BY id DESC LIMIT 1").fetchone()
         if row is None:
             return True
-        last = datetime.strptime(row["started_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=now.tzinfo)
+        last = datetime.strptime(row["started_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)  # stored as UTC
         return now >= last + timedelta(hours=interval_hours)
 
     def check_count(self) -> int:

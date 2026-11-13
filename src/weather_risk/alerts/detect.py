@@ -14,6 +14,8 @@ Scores = dict[str, dict[str, float]]  # hub_id -> metric -> score (one decimal)
 
 # The demo's simulated previous scores (research.md §5): today's scores with these shifts.
 # Dallas heat 7.5 lower -> the demo shows it rising 7.5; Houston hurricane 5.0 higher -> falling 5.0.
+# If a shift would leave the 0-100 scale, it is applied in the other direction instead, so the
+# demo always shows the full move (code review: clamping could hide it, e.g. Dallas heat in winter).
 DEMO_SHIFTS: dict[tuple[str, str], float] = {("dallas", "heat"): -7.5, ("houston", "hurricane"): +5.0}
 
 
@@ -51,5 +53,8 @@ def simulate_previous(current: Scores) -> Scores:
     previous = copy.deepcopy(current)
     for (hub_id, metric), shift in DEMO_SHIFTS.items():
         if metric in previous.get(hub_id, {}):
-            previous[hub_id][metric] = min(100.0, max(0.0, round(previous[hub_id][metric] + shift, 1)))
+            value = previous[hub_id][metric]
+            if not 0.0 <= value + shift <= 100.0:
+                shift = -shift
+            previous[hub_id][metric] = round(value + shift, 1)
     return previous

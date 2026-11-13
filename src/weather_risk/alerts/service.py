@@ -7,6 +7,7 @@ deliver each alert. Only one check runs at a time in this process (FR-216).
 
 import logging
 import threading
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 
@@ -47,34 +48,37 @@ def _now() -> str:
 
 def run_check(kind: str = "manual", settings: Settings | None = None, fetch=None,
               engine_factory: Callable[[], Engine] = Engine.from_settings,
-              client: httpx.Client | None = None) -> CheckSummary:
+              client: httpx.Client | None = None, wait=time.sleep) -> CheckSummary:
     """A real check: `kind` is "scheduled" or "manual". Fetches live data into DATA_DIR first."""
     if kind not in ("scheduled", "manual"):
         raise ValueError("kind must be 'scheduled' or 'manual'; use run_demo for the demo")
     # fetch_all is looked up at call time, so tests can replace it on this module.
-    return _run(kind, settings or get_settings(), fetch or fetch_all, engine_factory, client)
+    return _run(kind, settings or get_settings(), fetch or fetch_all, engine_factory, client, wait)
 
 
 def run_demo(settings: Settings | None = None,
              engine_factory: Callable[[], Engine] = Engine.from_settings,
-             client: httpx.Client | None = None) -> CheckSummary:
+             client: httpx.Client | None = None, wait=time.sleep) -> CheckSummary:
     """The demo: no fetch, today's real scores against a simulated previous set; never touches
     the real score history (FR-217)."""
-    return _run("demo", settings or get_settings(), None, engine_factory, client)
+    return _run("demo", settings or get_settings(), None, engine_factory, client, wait)
 
 
-def _run(kind, settings, fetch, engine_factory, client) -> CheckSummary:
+def _run(kind, settings, fetch, engine_factory, client, wait) -> CheckSummary:
     if not _lock.acquire(blocking=False):
         raise CheckBusy("a check is already running")
     try:
         history = History(settings.alerts_db)
+        history.fail_interrupted()  # leftovers of a check killed mid-send; none is sending now
         started = _now()
-        failures = fetch(settings.data_dir, "all", echo=log.info).failures if fetch else []
-        try:
+        failures: list[str] = []
+        try:  # a crash in fetch or scoring is recorded, so the scheduler does not retry every poll
+            if fetch:
+                failures = fetch(settings.data_dir, "all", echo=log.info).failures
             engine = engine_factory()
             current = watched_scores(engine)
         except Exception as exc:  # recorded as failed; the next check compares with the last good one
-            log.error("risk-change check failed while scoring: %s", type(exc).__name__)
+            log.error("risk-change check failed: %s", type(exc).__name__)
             check_id, _ = history.record_check(
                 kind=kind, started_at=started, finished_at=_now(), status="failed", baseline=False,
                 hubs_checked=0, fetch_failures=failures, data_retrieved=[], scores=None,
@@ -94,29 +98,26 @@ def _run(kind, settings, fetch, engine_factory, client) -> CheckSummary:
             delivery_status="pending" if url else "not_configured")
 
         delivered = failed = 0
-        for alert in _alerts_by_id(history, alert_ids):
+        for alert in history.get_alerts(alert_ids):
             payload = build_payload(alert, settings.alert_threshold, engine.hubs[alert["hub_id"]].name)
             log_alert(payload)
-            if url:
-                status, error = deliver(url.get_secret_value(), payload, client)
-                history.set_delivery(alert["id"], status, error)
-                delivered += status == "delivered"
-                failed += status == "failed"
+            if not url:
+                continue
+            if failed:  # the webhook is failing: do not spend ~20 s per alert holding the lock
+                status, error = "failed", "skipped after an earlier failure"
+            else:
+                status, error = deliver(url.get_secret_value(), payload, client, wait=wait)
+            history.set_delivery(alert["id"], status, error)
+            delivered += status == "delivered"
+            failed += status == "failed"
 
         return CheckSummary(
             check_id=check_id, kind=kind, status="ok", baseline=baseline,
             hubs_checked=len(current), alerts_raised=len(changes), fetch_failures=failures,
             delivered=delivered, delivery_failed=failed,
-            alerts=[_with_name(a, engine) for a in _alerts_by_id(history, alert_ids)])
+            alerts=[_with_name(a, engine) for a in history.get_alerts(alert_ids)])
     finally:
         _lock.release()
-
-
-def _alerts_by_id(history: History, ids: list[int]) -> list[dict]:
-    """The just-recorded alerts, oldest first, as stored."""
-    wanted = set(ids)
-    rows = history.list_alerts(limit=max(len(ids), 1)) if ids else []
-    return sorted((a for a in rows if a["id"] in wanted), key=lambda a: a["id"])
 
 
 def _with_name(alert: dict, engine: Engine) -> dict:

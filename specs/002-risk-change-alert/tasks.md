@@ -135,8 +135,8 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
   - `uv run ruff check src scripts tests`;
   - `uv run python -m weather_risk eval`, expecting 20/20 (FR-218, SC-205). Run this **before** the local `alerts check`, which writes `data/live`, so the evals run on the seed;
   - locally, `python -m weather_risk alerts demo`, then `alerts list`, then `alerts check` twice (a baseline, then 0 alerts); afterwards delete `data/live/` so local runs return to the seed.
-- [ ] T221 Code review of the 002 diff with the `code-reviewer` agent, plus a security pass on the token, the webhook and the SQL (`backend-api-security`). Fix confirmed findings test-first, and log them in `docs/decisions.md`.
-- [ ] T222 Update `docs/architecture.md` (the alerts component, SQLite storage, the scheduler, the `/alerts` page) and the README (an alerts section: config variables, demo flow, limits such as slow drift and no catch-up). Railway variables and the redeploy are covered in the later step 4, not here.
+- [X] T221 Code review of the 002 diff with the `code-reviewer` agent, plus a security pass on the token, the webhook and the SQL (`backend-api-security`). Fix confirmed findings test-first, and log them in `docs/decisions.md`.
+- [X] T222 Update `docs/architecture.md` (the alerts component, SQLite storage, the scheduler, the `/alerts` page) and the README (an alerts section: config variables, demo flow, limits such as slow drift and no catch-up). Railway variables and the redeploy are covered in the later step 4, not here.
 
 ---
 

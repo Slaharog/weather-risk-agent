@@ -230,7 +230,8 @@ It was rewritten and the set was rerun; the default model still passes 20/20. Th
   - Each check compares with the previous one, so a slow drift of under 2 points per check never alerts.
   - A check missed while the service is down is not caught up; the next one still compares with the last recorded scores.
   - An alert being sent when the process crashes stays `pending`.
-  - A second `wra alerts check` process started at the same moment is not blocked by the in-process lock. SQLite keeps the history consistent.
+  - A second `wra alerts check` process started at the same moment is not blocked by the in-process lock: SQLite keeps the history consistent, but the same alerts could be delivered twice. On Railway all triggers go through the one service process.
+  - Alerts are delivered one by one; after the first failed delivery in a check, the rest are marked failed without sending, so a dead webhook cannot hold the check for minutes.
 - **Eval size.** The eval set is small (20 hand-written cases, one run each). Substring checks for refusals can miss valid wordings; this happened once and was fixed in the eval, not the prompt.
 
 ## How AI was used

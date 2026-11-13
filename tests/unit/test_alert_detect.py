@@ -74,11 +74,6 @@ def test_demo_shifts_dallas_heat_down_and_houston_hurricane_up():
     assert current["dallas"]["heat"] == 84.1  # input not mutated
 
 
-def test_demo_shift_is_clamped_to_the_score_scale():
-    previous = simulate_previous({"dallas": {"heat": 3.0}, "houston": {"hurricane": 98.0}})
-    assert previous == {"dallas": {"heat": 0.0}, "houston": {"hurricane": 100.0}}
-
-
 def test_demo_skips_a_missing_hub():
     assert simulate_previous({"miami": {"heat": 50.0}}) == {"miami": {"heat": 50.0}}
 
@@ -95,3 +90,11 @@ def test_blank_alert_secrets_mean_not_configured():
 
     s = Settings(alert_webhook_url="  ", alert_admin_token="")
     assert s.alert_webhook_url is None and s.alert_admin_token is None
+
+
+def test_demo_shift_flips_direction_instead_of_clamping():
+    # In winter Dallas heat may be near 0: subtracting 7.5 would clamp and lose the alert.
+    previous = simulate_previous({"dallas": {"heat": 1.0}, "houston": {"hurricane": 98.0}})
+    assert previous == {"dallas": {"heat": 8.5}, "houston": {"hurricane": 93.0}}
+    changes = detect_changes(previous, {"dallas": {"heat": 1.0}, "houston": {"hurricane": 98.0}}, 2.0)
+    assert [abs(c.change) for c in changes] == [7.5, 5.0]

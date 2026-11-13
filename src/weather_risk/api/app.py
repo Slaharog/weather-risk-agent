@@ -25,7 +25,7 @@ from weather_risk.alerts.scheduler import run_scheduler
 from weather_risk.alerts.service import CheckSummary
 from weather_risk.api.limits import RateLimiter
 from weather_risk.data.store import snapshot_version
-from weather_risk.hubs import Region
+from weather_risk.hubs import Region, load_hubs
 from weather_risk.scoring.engine import METRICS, OVERALL, Engine, UnknownHub, parse_metric
 from weather_risk.settings import get_settings
 
@@ -192,13 +192,13 @@ def alerts(limit: int = Query(50, ge=1, le=50)) -> dict:
     webhook URL, only whether one is configured (SC-206)."""
     s = get_settings()
     history = History(s.alerts_db)
-    hubs = engines.get().hubs
+    names = {h.id: h.name for h in load_hubs()}  # not the engine: the list must work if scoring fails
     return {
         "threshold": s.alert_threshold,
         "interval_hours": s.alert_interval_hours,
         "webhook_configured": s.alert_webhook_url is not None,
         "last_check": history.last_check(),
-        "alerts": [{**a, "hub_name": hubs[a["hub_id"]].name if a["hub_id"] in hubs else a["hub_id"]}
+        "alerts": [{**a, "hub_name": names.get(a["hub_id"], a["hub_id"])}
                    for a in history.list_alerts(limit)],
     }
 

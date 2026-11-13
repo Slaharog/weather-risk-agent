@@ -119,3 +119,25 @@ Two independent review agents ran on the finished code: a security auditor and a
 - **Webhook:** a generic JSON POST with a Slack-compatible `text` field, tested with webhook.site; 5 s timeout, 3 attempts; the URL is never logged or returned.
 - **Alerts page (added after plan review, at the user's request):** a read-only page at `/alerts`, linked from the chat header, renders `GET /api/alerts`. It is a separate page rather than a panel inside the chat page, so the chat page's code changes by one link only. It has no trigger buttons, so the operator token is never typed into a web page; demos are triggered from `/docs` (Authorize) or the CLI.
 - **Operator token, automated:** the token is generated locally (`secrets.token_urlsafe(32)`) straight into the git-ignored `.env` without being printed, then copied once into Railway's variables. `scripts/alert_demo.py <url>` reads it from `.env` and triggers the demo, so the token is never pasted or shown during a demo. Rejected: no token (anyone could spam the webhook and the public data APIs), or the token in the public page's JavaScript (equivalent to no token). Railway's `${{secret()}}` generator is documented for templates only, and the value is needed locally anyway.
+
+## 2026-11-13 - Feature 002 reviews (T221)
+
+Two read-only review agents ran on the finished alert code: a security reviewer and a code reviewer. All fixes were made test-first (red, then green); 217 tests pass afterwards.
+
+**Security (6 findings, none high):**
+- **Wrong tokens were not throttled** (CWE-307). Fixed: 5 failures per minute per client give 429, and `ALERT_ADMIN_TOKEN` must be at least 32 characters.
+- **Unbounded growth** (CWE-770). Fixed: the rate limiter forgets clients at day rollover; the alerts table keeps the newest 500 rows; unreferenced old checks are pruned.
+- **Cleartext** (CWE-319). Fixed: `ALERT_WEBHOOK_URL` must be https (localhost allowed), and `alert_demo.py` refuses to send the token over plain http. Settings now hide input values in validation errors (`hide_input_in_errors`), because Pydantic otherwise echoes a rejected URL or key.
+- **Schema DDL ran on every public GET.** Fixed: once per process.
+- **Not changed:** trusting `X-Real-IP`. Railway's edge overwrites a client-supplied value, which was verified live in step 1.
+- **Confirmed safe:** the constant-time token compare, the URL never appearing in any response or log, bound SQL parameters, `textContent`-only rendering, no request input choosing a URL (no SSRF), and no alert capability reachable from chat.
+
+**Code review (9 findings):**
+- **Confirmed bug, fixed:** the service found "this check's alerts" by reading the newest N rows, so an alert written in between by another check could push them out. Those alerts would never be delivered and would stay `pending`. Now `History.get_alerts(ids)` selects them by id.
+- **A dead webhook could hold the check lock for minutes:** up to about 20 s per alert, times up to 96 alerts. Now, after the first failed delivery in a check, the remaining alerts are marked "skipped after an earlier failure".
+- **`pending` could be permanent** after a crash or redeploy mid-send. Each check now first marks leftover `pending` rows as failed, with the reason "interrupted".
+- **A crash during the fetch was not recorded**, so `is_due` stayed true and the scheduler would re-fetch every 10 minutes. The fetch is now inside the try that records a failed check.
+- **`GET /api/alerts` returned 500 when the engine could not load**, exactly when a failed check needs to be seen. It now reads hub names from the hub config.
+- **The demo could show fewer than 2 alerts:** clamping to 0-100 could hide a shift (Dallas heat near 0 in winter). A shift that would leave the scale is now applied in the other direction.
+- **`is_due` borrowed the caller's timezone.** Stored times are UTC, and it now says so explicitly.
+- **Documentation corrected:** two overlapping check processes could deliver the same alerts twice, not merely run "two baseline-equivalent checks" as research.md first said.

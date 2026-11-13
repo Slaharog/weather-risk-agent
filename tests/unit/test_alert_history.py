@@ -131,3 +131,29 @@ def test_schema_is_created_once_per_file(tmp_path, monkeypatch):
     History(tmp_path / "a.sqlite")
     History(tmp_path / "a.sqlite")  # e.g. the next GET /api/alerts
     assert len(calls) == 1
+
+
+def test_get_alerts_returns_exactly_the_requested_ids(history):
+    _, first = record(history, kind="demo", changes=[
+        Change(hub_id="a", metric="heat", old=0.0, new=5.0, change=5.0),
+        Change(hub_id="b", metric="heat", old=0.0, new=5.0, change=5.0)])
+    record(history, kind="demo",  # written in between, e.g. by another process
+           changes=[Change(hub_id="c", metric="heat", old=0.0, new=5.0, change=5.0)])
+    assert [a["hub_id"] for a in history.get_alerts(first)] == ["a", "b"]
+
+
+def test_pending_alerts_left_by_an_interrupted_check_are_marked_failed(history):
+    _, [alert_id] = record(history, kind="demo", delivery="pending",
+                           changes=[Change(hub_id="a", metric="heat", old=0.0, new=5.0, change=5.0)])
+    assert history.fail_interrupted() == 1
+    [alert] = history.list_alerts()
+    assert (alert["delivery_status"], alert["delivery_error"]) == ("failed", "interrupted")
+
+
+def test_is_due_uses_utc_whatever_the_clock_zone(history):
+    from datetime import timezone
+
+    record(history, scores={"a": {"overall": 1.0}}, at=T0)  # stored as 18:00Z
+    israel = timezone(timedelta(hours=2))
+    assert history.is_due(datetime(2026, 11, 14, 19, 59, tzinfo=israel), 24) is False  # 17:59Z
+    assert history.is_due(datetime(2026, 11, 14, 20, 0, tzinfo=israel), 24) is True    # 18:00Z

@@ -44,4 +44,4 @@ Each decision was confirmed by the user on 2026-11-13. The spec-level choices ar
 ## 8. Concurrency
 
 - **Decision:** a module-level `threading.Lock` in `alerts/service.py`, taken with `acquire(blocking=False)`. If it is busy, the API returns 409 and the scheduler skips that tick.
-- **Known limit:** a `wra alerts check` started from a second process at the same moment is not covered by the lock. SQLite transactions keep the history consistent and refresh writes are atomic, so the worst case is two baseline-equivalent checks. Documented, not engineered around.
+- **Known limit:** a `wra alerts check` started from a second process at the same moment is not covered by the lock. SQLite transactions keep the history consistent and refresh writes are atomic, but both checks compare with the same last real check, so **the same alerts can be raised and delivered twice**. (Corrected after code review; the first version understated this as "two baseline-equivalent checks".) On Railway there is no second process in practice: the CLI cannot be run on the deployed container from the development machine, and triggers go through the service, which holds the lock.

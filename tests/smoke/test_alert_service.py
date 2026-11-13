@@ -98,3 +98,31 @@ def test_only_one_check_runs_at_a_time(make_settings):
     with service._lock:
         with pytest.raises(service.CheckBusy):
             service.run_check("manual", make_settings(), fetch=no_fetch)
+
+
+def test_after_a_failed_delivery_the_rest_are_not_sent(make_settings):
+    """A hanging webhook must not hold the lock for minutes per alert (code review #3)."""
+    sent = []
+
+    def handler(request):
+        sent.append(1)
+        return httpx.Response(500)
+
+    settings = make_settings(alert_webhook_url="https://hooks.example.test/x")
+    summary = service.run_demo(settings, client=httpx.Client(transport=httpx.MockTransport(handler)),
+                               wait=lambda s: None)
+    assert len(sent) == 3  # 3 attempts for the first alert only
+    assert [a["delivery_status"] for a in summary.alerts] == ["failed", "failed"]
+    assert summary.alerts[1]["delivery_error"] == "skipped after an earlier failure"
+
+
+def test_a_fetch_crash_is_recorded_and_releases_the_lock(make_settings):
+    def crashing_fetch(root, source, echo):
+        raise OSError("disk full")
+
+    settings = make_settings()
+    summary = service.run_check("manual", settings, fetch=crashing_fetch)
+    assert summary.status == "failed"
+    assert History(settings.alerts_db).last_check()["status"] == "failed"  # so is_due waits
+    assert service._lock.acquire(blocking=False)
+    service._lock.release()

@@ -16,7 +16,7 @@ All tables live in `DATA_DIR/alerts.sqlite`. Times are UTC ISO-8601 strings (`20
 - Output order is sorted by `(hub_id, metric)`, so it is deterministic.
 - Validation: `threshold > 0`.
 
-`simulate_previous(current) -> previous`: a deep copy with `dallas.heat -= 7.5` and `houston.hurricane += 5.0` (rounded to 1 decimal, clamped to 0-100), giving exactly 2 changes at the default threshold of 2.0. If a hub or metric is missing, that shift is skipped.
+`simulate_previous(current) -> previous`: a deep copy with `dallas.heat -= 7.5` and `houston.hurricane += 5.0` (rounded to 1 decimal; a shift that would leave 0-100 is applied in the other direction instead), giving exactly 2 changes at the default threshold of 2.0. If a hub or metric is missing, that shift is skipped.
 
 ## 3. Tables
 

@@ -140,3 +140,14 @@ def test_repeated_wrong_tokens_are_throttled(trigger, monkeypatch):
     monkeypatch.setattr(app_module, "auth_failure_limiter", RateLimiter(per_minute=5, per_day=500))
     codes = [client.post("/api/alerts/demo", headers=auth("wrong")).status_code for _ in range(6)]
     assert codes == [403] * 5 + [429]
+
+
+def test_alert_list_works_when_the_engine_cannot_load(data_dir, monkeypatch):
+    add_demo_alerts(1)
+
+    def broken():
+        raise FileNotFoundError("snapshot missing")
+
+    monkeypatch.setattr(app_module.engines, "get", broken)
+    response = client.get("/api/alerts")
+    assert response.status_code == 200 and response.json()["alerts"][0]["hub_name"] == "Dallas, TX"
