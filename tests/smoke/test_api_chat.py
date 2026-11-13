@@ -94,3 +94,15 @@ def test_ip_header_is_ignored_unless_configured(fake_llm, monkeypatch):
     a = client.post("/api/chat", json={"message": "hi"}, headers={"X-Real-IP": "203.0.113.1"})
     b = client.post("/api/chat", json={"message": "hi"}, headers={"X-Real-IP": "203.0.113.2"})
     assert (a.status_code, b.status_code) == (200, 429)
+
+
+def test_chat_page_has_voice_input_with_fallback_and_no_auto_send():
+    """Spec 003: mic control, announced status, unsupported note, privacy hint, no auto-send."""
+    page = client.get("/").text
+    assert 'id="mic"' in page and 'aria-pressed="false"' in page
+    assert 'id="voice-status"' in page and 'role="status"' in page
+    assert "Voice input isn't supported in this browser" in page
+    assert "Voice uses your browser's speech service" in page
+    voice_code = page[page.index("function initVoice("):page.index("// end initVoice")]
+    for forbidden in ("requestSubmit", ".submit(", "ask("):
+        assert forbidden not in voice_code  # voice fills the box; only Send sends
