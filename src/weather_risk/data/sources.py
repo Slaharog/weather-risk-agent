@@ -43,17 +43,29 @@ def _client() -> httpx.Client:
     )
 
 
-def _get_json(client: httpx.Client, url: str, params: dict, retries: int = 2) -> dict:
+RATE_LIMIT_WAIT_S = 60  # Open-Meteo weights long multi-variable requests as many calls
+
+
+class SourceError(RuntimeError):
+    """A public data source failed; the message is short and safe to print."""
+
+
+def _get_json(client: httpx.Client, url: str, params: dict, retries: int = 3) -> dict:
     for attempt in range(retries + 1):
         try:
             response = client.get(url, params=params)
+            if response.status_code == 429 and attempt < retries:
+                time.sleep(RATE_LIMIT_WAIT_S)
+                continue
             response.raise_for_status()
             return response.json()
-        except (httpx.HTTPError, ValueError):
+        except httpx.HTTPStatusError as exc:
+            raise SourceError(f"HTTP {exc.response.status_code} from {exc.request.url.host}") from exc
+        except (httpx.TransportError, ValueError) as exc:
             if attempt == retries:
-                raise
+                raise SourceError(f"{type(exc).__name__} calling {url.split('/')[2]}") from exc
             time.sleep(2 * (attempt + 1))
-    raise AssertionError("unreachable")
+    raise SourceError(f"still rate-limited by {url.split('/')[2]} after {retries} retries")
 
 
 # ---------- Open-Meteo ----------
@@ -132,7 +144,7 @@ def fetch_nri(client: httpx.Client | None = None) -> NriDataset:
                 "f": "json",
             })
             if "error" in page:
-                raise RuntimeError(f"FEMA NRI query failed: {page['error']}")
+                raise SourceError(f"FEMA NRI query failed: {page['error'].get('message', 'unknown')}")
             batch, page_version = parse_nri_features(page.get("features", []))
             counties += batch
             version = page_version or version
@@ -140,5 +152,5 @@ def fetch_nri(client: httpx.Client | None = None) -> NriDataset:
                 break
             offset += len(batch)
     if len(counties) < 3000:
-        raise RuntimeError(f"FEMA NRI returned only {len(counties)} counties; expected about 3,232")
+        raise SourceError(f"FEMA NRI returned only {len(counties)} counties; expected about 3,232")
     return NriDataset(version=version, retrieved_at=_now(), counties=counties)

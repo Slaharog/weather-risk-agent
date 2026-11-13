@@ -1,0 +1,122 @@
+{
+  "nri": {
+    "counties": 3232,
+    "retrieved_at": "2026-11-13",
+    "source": "FEMA National Risk Index",
+    "version": "December 2025"
+  },
+  "weather": {
+    "atlanta": {
+      "days": 3653,
+      "end_date": "2025-12-31",
+      "retrieved_at": "2026-11-13",
+      "source": "Open-Meteo Historical Weather API (ERA5)",
+      "start_date": "2016-01-01"
+    },
+    "chicago": {
+      "days": 3653,
+      "end_date": "2025-12-31",
+      "retrieved_at": "2026-11-13",
+      "source": "Open-Meteo Historical Weather API (ERA5)",
+      "start_date": "2016-01-01"
+    },
+    "columbus": {
+      "days": 3653,
+      "end_date": "2025-12-31",
+      "retrieved_at": "2026-11-13",
+      "source": "Open-Meteo Historical Weather API (ERA5)",
+      "start_date": "2016-01-01"
+    },
+    "dallas": {
+      "days": 3653,
+      "end_date": "2025-12-31",
+      "retrieved_at": "2026-11-13",
+      "source": "Open-Meteo Historical Weather API (ERA5)",
+      "start_date": "2016-01-01"
+    },
+    "denver": {
+      "days": 3653,
+      "end_date": "2025-12-31",
+      "retrieved_at": "2026-11-13",
+      "source": "Open-Meteo Historical Weather API (ERA5)",
+      "start_date": "2016-01-01"
+    },
+    "detroit": {
+      "days": 3653,
+      "end_date": "2025-12-31",
+      "retrieved_at": "2026-11-13",
+      "source": "Open-Meteo Historical Weather API (ERA5)",
+      "start_date": "2016-01-01"
+    },
+    "houston": {
+      "days": 3653,
+      "end_date": "2025-12-31",
+      "retrieved_at": "2026-11-13",
+      "source": "Open-Meteo Historical Weather API (ERA5)",
+      "start_date": "2016-01-01"
+    },
+    "indianapolis": {
+      "days": 3653,
+      "end_date": "2025-12-31",
+      "retrieved_at": "2026-11-13",
+      "source": "Open-Meteo Historical Weather API (ERA5)",
+      "start_date": "2016-01-01"
+    },
+    "kansas-city": {
+      "days": 3653,
+      "end_date": "2025-12-31",
+      "retrieved_at": "2026-11-13",
+      "source": "Open-Meteo Historical Weather API (ERA5)",
+      "start_date": "2016-01-01"
+    },
+    "los-angeles": {
+      "days": 3653,
+      "end_date": "2025-12-31",
+      "retrieved_at": "2026-11-13",
+      "source": "Open-Meteo Historical Weather API (ERA5)",
+      "start_date": "2016-01-01"
+    },
+    "memphis": {
+      "days": 3653,
+      "end_date": "2025-12-31",
+      "retrieved_at": "2026-11-13",
+      "source": "Open-Meteo Historical Weather API (ERA5)",
+      "start_date": "2016-01-01"
+    },
+    "miami": {
+      "days": 3653,
+      "end_date": "2025-12-31",
+      "retrieved_at": "2026-11-13",
+      "source": "Open-Meteo Historical Weather API (ERA5)",
+      "start_date": "2016-01-01"
+    },
+    "minneapolis": {
+      "days": 3653,
+      "end_date": "2025-12-31",
+      "retrieved_at": "2026-11-13",
+      "source": "Open-Meteo Historical Weather API (ERA5)",
+      "start_date": "2016-01-01"
+    },
+    "newark": {
+      "days": 3653,
+      "end_date": "2025-12-31",
+      "retrieved_at": "2026-11-13",
+      "source": "Open-Meteo Historical Weather API (ERA5)",
+      "start_date": "2016-01-01"
+    },
+    "phoenix": {
+      "days": 3653,
+      "end_date": "2025-12-31",
+      "retrieved_at": "2026-11-13",
+      "source": "Open-Meteo Historical Weather API (ERA5)",
+      "start_date": "2016-01-01"
+    },
+    "st-louis": {
+      "days": 3653,
+      "end_date": "2025-12-31",
+      "retrieved_at": "2026-11-13",
+      "source": "Open-Meteo Historical Weather API (ERA5)",
+      "start_date": "2016-01-01"
+    }
+  }
+}
