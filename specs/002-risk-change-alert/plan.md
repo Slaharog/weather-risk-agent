@@ -10,7 +10,7 @@ Add a risk-change check that runs on a schedule inside the existing FastAPI proc
 
 - **Storage:** checks, score records and alerts go into one SQLite file on the volume (stdlib `sqlite3`, raw SQL).
 - **Delivery:** each alert is logged and POSTed to a webhook URL that comes only from env.
-- **Viewing:** alerts are listed at public `GET /api/alerts`.
+- **Viewing:** alerts are listed at public `GET /api/alerts`, and on a read-only page at `/alerts` (linked from the chat header) that renders it (FR-220).
 - **Manual trigger:** `wra alerts check|demo|list` from the CLI, or token-protected `POST /api/alerts/check|demo` on the service.
 - **Demo:** it compares today's real scores with a simulated previous set (fixed shifts for two hubs), and stores its alerts labeled `demo` without writing score history.
 - **Test-first:** change detection is a pure function, developed test-first.
@@ -90,7 +90,9 @@ src/weather_risk/
 │   ├── notify.py            # webhook payload + POST with timeout/retries; logs every alert
 │   ├── service.py           # run_check(kind) / run_demo(): orchestration + one-at-a-time lock
 │   └── scheduler.py         # asyncio loop: every 10 min, run a check in a thread if due
-├── api/app.py               # + lifespan starts the scheduler; + 3 alert routes
+├── api/app.py               # + lifespan starts the scheduler; + 3 alert routes; + GET /alerts page
+├── api/static/alerts.html   # NEW: read-only alerts page (HTML + inline JS, textContent only)
+├── api/static/index.html    # + one "Alerts" link in the header (no other change)
 └── cli.py                   # refresh uses data/refresh.py; + `wra alerts check|demo|list`
 tests/
 ├── unit/test_alert_detect.py, test_alert_history.py, test_alert_notify.py
@@ -110,6 +112,7 @@ tests/
 4. `alerts/notify.py`: payload and delivery, with a fake transport in tests.
 5. `alerts/service.py`: run_check and run_demo, plus the CLI `wra alerts ...`.
 6. API routes plus the lifespan scheduler, with smoke tests.
+6b. The `/alerts` page and the header link; a smoke test that the page is served; a manual check in the browser (light and dark mode), plus impeccable triage.
 7. Full tests and `wra eval` (20/20 expected), then docs.
 
 ## Complexity Tracking

@@ -15,6 +15,7 @@
 - Q: How should the alert demo produce a score change? → A: Simulated previous scores: the demo runs the real detection code on today's real scores against a copy of them shifted by a fixed amount for one or two hubs; it writes nothing to the real score history.
 - Q: Which scores are watched, and what threshold fires an alert? → A: Each hub's overall score and its five hazard scores; an alert fires when the absolute change is at least 2.0 points (configurable, one threshold for all).
 - Q: How is triggering a check or the demo on the deployed service protected? → A: Both require an operator bearer token from configuration; with no token configured, both are disabled on the service. The command line needs no token. The alert list stays public.
+- Q: Where does a person see alerts in the web app? (asked by the user after plan review) → A: A read-only "Recent alerts" page at `/alerts`, linked from the chat page header, rendering the same data as `GET /api/alerts`. It has no trigger buttons, so the operator token is never entered in a web page.
 - Q: Does the scheduled check's fresh data also become what chat and rankings use? → A: Yes. A check fetches data exactly like the refresh command (same location, atomic, a failed source keeps its old data), so alerts, rankings, and chat always describe the same data. The committed seed snapshot is never modified.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -53,6 +54,7 @@ The analyst or operator opens a list of recent alerts, newest first, each showin
 1. **Given** alerts exist, **When** the list is requested, **Then** alerts are returned newest first with all fields above.
 2. **Given** no alerts exist, **When** the list is requested, **Then** an empty list is returned along with when the last check ran and how many hubs it covered.
 3. **Given** the service restarts, **When** the list is requested, **Then** previously recorded alerts and score history are still there.
+4. **Given** a person on the chat page, **When** they follow the "Alerts" link, **Then** a read-only page shows the last check (time, kind, hubs checked, alerts raised), the threshold, whether a destination is configured, and the recent alerts, each with hub, score, old and new values, change, time, a visible "demo" label where applicable, and delivery status.
 
 ---
 
@@ -133,6 +135,8 @@ Because real data rarely changes, the operator can demonstrate the full path (de
 
 - **FR-217**: The system MUST provide a demonstration that drives at least one alert through the same detection, recording, delivery, and listing path. The demonstration compares today's real scores with a simulated previous set: a copy of them with a fixed, documented shift applied to one or two hubs' scores. The simulated set is never written to the real score history. Demonstration alerts MUST be labeled as such everywhere they appear, and a demonstration MUST NOT change real scores, real score history used for the next real check, rankings, or chat answers.
 
+- **FR-220**: The web app MUST provide a read-only alerts page, reachable from a link in the chat page header, that shows the same information as the alert list (FR-214) without the language model. All values MUST be displayed as text (never interpreted as markup). The page MUST NOT offer triggering, and MUST meet the same accessibility basics as the chat page (keyboard reachable, readable contrast in light and dark mode, the demo label not conveyed by color alone).
+
 **Safety and scope**
 
 - **FR-218**: Chat behavior, rankings, breakdowns, statistics, and the eval results of feature 001 MUST be unchanged on the same data. (A real check may bring newer data, exactly as the refresh command can; the scoring and answer logic do not change.) The agent gets no new tools in this feature.
@@ -164,4 +168,4 @@ Because real data rarely changes, the operator can demonstrate the full path (de
 - **Daily default interval.** The underlying data changes at most a few times a year, so checking more often only adds load on free public data providers.
 - **Webhook format.** A JSON POST with a human-readable `text` field (accepted by Slack-style incoming webhooks and generic catchers such as webhook.site) plus the structured alert fields.
 - **History size.** Kept small and bounded (recent checks and alerts only); long-term retention is out of scope.
-- **Out of scope:** alerts on forecasts or live weather events, per-user subscriptions, multiple destinations, email or SMS, alert acknowledgement, and alerts inside the chat page.
+- **Out of scope:** alerts on forecasts or live weather events, per-user subscriptions, multiple destinations, email or SMS, alert acknowledgement, alerts inside the chat conversation itself, live push to the browser (the page loads on open and has a reload button), and triggering from the web page.

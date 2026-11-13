@@ -33,6 +33,10 @@ Response `200`:
 - `alerts`: newest first (by id). `last_check`: the newest check of any kind, or `null` if none.
 - `webhook_configured` is a boolean only. The URL is never returned (SC-206).
 
+## GET /alerts (page)
+
+Not part of `/api`: it serves `static/alerts.html`, a read-only page that fetches `GET /api/alerts` on load and with a "Reload" button. It renders every value with `textContent`, marks demo alerts with a text badge "demo" (not color alone), and shows the delivery status as text. It has no trigger controls. The chat page header links to it.
+
 ## POST /api/alerts/check
 
 Runs a real check now (the same code as the scheduler, with `kind="manual"`). It takes about 1 minute, because it fetches live data.

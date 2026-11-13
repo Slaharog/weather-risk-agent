@@ -33,6 +33,7 @@ python scripts/smoke_deploy.py https://weather-risk-agent-production.up.railway.
 # then, with the token from Railway variables (do not commit it):
 POST /api/alerts/demo   with header Authorization: Bearer $ALERT_ADMIN_TOKEN   -> 200, 2 alerts
 GET  /api/alerts                                                               -> the 2 demo alerts, webhook_configured true
+GET  /alerts (in a browser)                                                     -> the same 2 alerts with a "demo" badge
 # webhook.site shows 2 POSTs whose text starts with [DEMO]
 POST /api/alerts/demo   without the header                                     -> 403
 ```
