@@ -34,3 +34,11 @@ def test_fetch_failure_gives_exit_code_2(monkeypatch):
                         lambda root, source, echo: RefreshResult(failures=["nri"]))
     result = runner.invoke(app, ["alerts", "check"])
     assert result.exit_code == 2 and "fetch failures (previous data kept): nri" in result.output
+
+
+def test_demo_prints_two_demo_alerts():
+    result = runner.invoke(app, ["alerts", "demo"])
+    assert result.exit_code == 0
+    assert "Demo check #1: ok, 16 hubs, 2 alerts" in result.output
+    assert "[demo] Dallas, TX" in result.output and "(+7.5)" in result.output
+    assert "[demo] Houston, TX" in result.output and "(-5.0)" in result.output

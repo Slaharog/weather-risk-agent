@@ -227,3 +227,14 @@ def trigger_check(http: Request) -> CheckSummary:
         return alert_service.run_check("manual")
     except alert_service.CheckBusy:
         raise HTTPException(status_code=409, detail="A check is already running.") from None
+
+
+@app.post("/api/alerts/demo", response_model=CheckSummary)
+def trigger_demo(http: Request) -> CheckSummary:
+    """Demo alerts through the real detect/record/deliver path, from simulated previous scores.
+    No external fetch; real scores and history are untouched. Operator token required."""
+    _authorize_trigger(http)
+    try:
+        return alert_service.run_demo()
+    except alert_service.CheckBusy:
+        raise HTTPException(status_code=409, detail="A check is already running.") from None

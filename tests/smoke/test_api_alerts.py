@@ -112,3 +112,21 @@ def test_check_while_another_runs_gives_409(trigger):
 def test_third_trigger_within_a_minute_gives_429(trigger):
     codes = [client.post("/api/alerts/check", headers=auth()).status_code for _ in range(3)]
     assert codes == [200, 200, 429]
+
+
+# ---------- POST /api/alerts/demo (T218) ----------
+
+def test_demo_needs_the_token(trigger):
+    assert client.post("/api/alerts/demo").status_code == 403
+
+
+def test_demo_gives_two_labeled_alerts_and_changes_nothing_real(trigger):
+    rankings_before = client.get("/api/rankings").content
+    body = client.post("/api/alerts/demo", headers=auth()).json()
+    assert body["kind"] == "demo" and body["alerts_raised"] == 2
+    assert [(a["hub_id"], a["metric"], a["change"], a["is_demo"]) for a in body["alerts"]] == [
+        ("dallas", "heat", 7.5, True), ("houston", "hurricane", -5.0, True)]
+    assert client.get("/api/rankings").content == rankings_before  # byte-identical (FR-218)
+
+    real = client.post("/api/alerts/check", headers=auth()).json()  # unchanged data
+    assert real["baseline"] is True and real["alerts_raised"] == 0  # the demo left no history

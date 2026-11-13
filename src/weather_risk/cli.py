@@ -204,6 +204,14 @@ def alerts_check() -> None:
         raise typer.Exit(code=2)
 
 
+@alerts_app.command("demo")
+def alerts_demo() -> None:
+    """Demo alerts from simulated previous scores (no fetch; real history untouched)."""
+    from weather_risk.alerts import service
+
+    _print_summary(service.run_demo())
+
+
 @alerts_app.command("list")
 def alerts_list(limit: int = typer.Option(20, min=1, max=50, help="How many alerts to show.")) -> None:
     """Show the last check and the newest alerts. No LLM, no network."""

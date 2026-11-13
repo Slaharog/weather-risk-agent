@@ -120,7 +120,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
 
 ## Phase 6: User Story 4 - Demonstrate an alert (P2)
 
-- [ ] T218 [US4] Add `run_demo(settings) -> CheckSummary` to `src/weather_risk/alerts/service.py` (no fetch; `previous = simulate_previous(current)`; a `kind='demo'` check; `is_demo` alerts; no score records). Add `wra alerts demo`, and `POST /api/alerts/demo` with the same auth, 409 and 429 rules as T217. Add smoke tests covering:
+- [X] T218 [US4] Add `run_demo(settings) -> CheckSummary` to `src/weather_risk/alerts/service.py` (no fetch; `previous = simulate_previous(current)`; a `kind='demo'` check; `is_demo` alerts; no score records). Add `wra alerts demo`, and `POST /api/alerts/demo` with the same auth, 409 and 429 rules as T217. Add smoke tests covering:
   - the demo gives exactly 2 alerts, Dallas heat +7.5 and Houston hurricane −5.0, all `is_demo`;
   - afterwards, `GET /api/rankings` is byte-identical to before;
   - a following real check (fake fetch, unchanged data) gives 0 alerts.
