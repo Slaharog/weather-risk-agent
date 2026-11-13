@@ -16,4 +16,8 @@ Demo check #6: 16 hubs, 2 alerts (threshold 2.0)
 [demo] Houston     hurricane  65.1 -> 60.1  (-5.0)   delivered
 ```
 
+## scripts/alert_demo.py (operator helper for the deployed service)
+
+`uv run python scripts/alert_demo.py <base-url> [--check]` reads `ALERT_ADMIN_TOKEN` from the environment or `.env` (through the app's settings), calls `POST /api/alerts/demo` (or `/check` with `--check`) with the bearer header, and prints the summary in the same format as `wra alerts demo`. It never prints the token. Exit 1 if no token is configured; exit 2 on any non-200 response (the status code is printed).
+
 `wra refresh` keeps its output and exit codes. It does not record scores or raise alerts; the next check compares against the last recorded check, so a change brought in by a manual refresh is still caught.

@@ -30,8 +30,9 @@ Expected:
 
 ```bash
 python scripts/smoke_deploy.py https://weather-risk-agent-production.up.railway.app
-# then, with the token from Railway variables (do not commit it):
-POST /api/alerts/demo   with header Authorization: Bearer $ALERT_ADMIN_TOKEN   -> 200, 2 alerts
+uv run python scripts/alert_demo.py https://weather-risk-agent-production.up.railway.app
+#   uses ALERT_ADMIN_TOKEN from .env (same value as the Railway variable)    -> 2 demo alerts printed
+# manual fallback: /docs -> Authorize -> POST /api/alerts/demo
 GET  /api/alerts                                                               -> the 2 demo alerts, webhook_configured true
 GET  /alerts (in a browser)                                                     -> the same 2 alerts with a "demo" badge
 # webhook.site shows 2 POSTs whose text starts with [DEMO]

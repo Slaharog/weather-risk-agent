@@ -94,6 +94,8 @@ src/weather_risk/
 ├── api/static/alerts.html   # NEW: read-only alerts page (HTML + inline JS, textContent only)
 ├── api/static/index.html    # + one "Alerts" link in the header (no other change)
 └── cli.py                   # refresh uses data/refresh.py; + `wra alerts check|demo|list`
+scripts/
+└── alert_demo.py            # NEW: calls POST /api/alerts/demo (or --check) with the token from .env
 tests/
 ├── unit/test_alert_detect.py, test_alert_history.py, test_alert_notify.py
 └── smoke/test_api_alerts.py, test_cli_alerts.py, test_scheduler.py
@@ -112,6 +114,7 @@ tests/
 4. `alerts/notify.py`: payload and delivery, with a fake transport in tests.
 5. `alerts/service.py`: run_check and run_demo, plus the CLI `wra alerts ...`.
 6. API routes plus the lifespan scheduler, with smoke tests.
+6a. `scripts/alert_demo.py`; generate `ALERT_ADMIN_TOKEN` into `.env` (never printed).
 6b. The `/alerts` page and the header link; a smoke test that the page is served; a manual check in the browser (light and dark mode), plus impeccable triage.
 7. Full tests and `wra eval` (20/20 expected), then docs.
 
