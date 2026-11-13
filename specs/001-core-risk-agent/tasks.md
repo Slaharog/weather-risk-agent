@@ -148,8 +148,8 @@ Single project: `src/weather_risk/`, `tests/`, `evals/`, `config/`, `data/` at r
 
 **Independent Test**: scripted 3 turns (Midwest winter ranking → "why is the first one so high?" → "compare it with Chicago") refer to the right hubs.
 
-- [ ] T051 [US5] TDD: write `tests/unit/test_conversation.py` with a fake LLM: earlier turns (including tool results) of the same conversation are sent to the model; a new conversation sends none; the store keeps the last 20 turns and at most 200 conversations
-- [ ] T052 [US5] Make `src/weather_risk/agent/loop.py` and `src/weather_risk/api/app.py` pass these tests; run the scripted 3-turn check manually and note the result in `docs/decisions.md` if the prompt needed changes
+- [X] T051 [US5] TDD: write `tests/unit/test_conversation.py` with a fake LLM: earlier turns (including tool results) of the same conversation are sent to the model; a new conversation sends none; the store keeps the last 20 turns and at most 200 conversations
+- [X] T052 [US5] Make `src/weather_risk/agent/loop.py` and `src/weather_risk/api/app.py` pass these tests; run the scripted 3-turn check manually and note the result in `docs/decisions.md` if the prompt needed changes
 
 ---
 
