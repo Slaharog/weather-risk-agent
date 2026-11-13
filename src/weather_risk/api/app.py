@@ -4,7 +4,9 @@ The LLM-free endpoints (/api/rankings, /api/hubs/{id}/breakdown) read the same e
 agent's tools use, so the numbers are identical on every path (FR-029).
 """
 
+import asyncio
 import threading
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -16,13 +18,26 @@ from weather_risk.agent.llm import LlmClient, LlmUnavailable, OpenAILlm
 from weather_risk.agent.loop import run_turn
 from weather_risk.agent.schemas import ChatResponse
 from weather_risk.agent.tools import ToolRegistry
+from weather_risk.alerts.scheduler import run_scheduler
 from weather_risk.api.limits import RateLimiter
 from weather_risk.data.store import snapshot_version
 from weather_risk.hubs import Region
 from weather_risk.scoring.engine import METRICS, OVERALL, Engine, UnknownHub, parse_metric
 from weather_risk.settings import get_settings
 
-app = FastAPI(title="Weather Risk Intelligence Agent", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Starts the risk-change scheduler (spec 002) when ALERT_INTERVAL_HOURS > 0; off by default."""
+    task = asyncio.create_task(run_scheduler()) if get_settings().alert_interval_hours > 0 else None
+    yield
+    if task:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+
+app = FastAPI(title="Weather Risk Intelligence Agent", version="0.1.0", lifespan=lifespan)
 
 
 class EngineHolder:
