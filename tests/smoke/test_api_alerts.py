@@ -55,3 +55,10 @@ def test_the_webhook_url_is_never_returned(data_dir, monkeypatch):
 @pytest.mark.parametrize("limit", [0, 51])
 def test_limit_is_validated(data_dir, limit):
     assert client.get(f"/api/alerts?limit={limit}").status_code == 422
+
+
+def test_alerts_page_is_served_and_linked_from_the_chat_header():
+    page = client.get("/alerts")
+    assert page.status_code == 200 and "Recent alerts" in page.text
+    assert "innerHTML" not in page.text  # values are rendered with textContent only
+    assert 'href="/alerts"' in client.get("/").text

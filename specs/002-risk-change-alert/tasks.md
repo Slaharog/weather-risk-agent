@@ -96,7 +96,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
 **Independent Test**: after recording alerts, `GET /api/alerts` and `/alerts` show them newest first, with the demo label.
 
 - [X] T214 [US2] Add `GET /api/alerts?limit=` (1 to 50, default 50) in `src/weather_risk/api/app.py`, returning `threshold`, `interval_hours`, `webhook_configured` (a bool only, never the URL), `last_check` and `alerts` with `hub_name`, per contracts/http-api.md. Add a smoke test in `tests/smoke/test_api_alerts.py`, including that the configured URL string appears nowhere in the response body (SC-206).
-- [ ] T215 [US2] Create `src/weather_risk/api/static/alerts.html`:
+- [X] T215 [US2] Create `src/weather_risk/api/static/alerts.html`:
   - It reuses the chat page's color tokens (light and dark).
   - On load and on a "Reload" button, it fetches `/api/alerts` and renders the summary of the last check, the threshold, whether a destination is configured, and a table with one row per alert (hub, score, old → new, change, time, a "demo" text badge, delivery status).
   - It uses `textContent` only, has an empty state, and shows an error state if the fetch fails.

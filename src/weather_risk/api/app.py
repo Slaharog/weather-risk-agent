@@ -175,6 +175,12 @@ def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.get("/alerts", include_in_schema=False)
+def alerts_page() -> FileResponse:
+    """Read-only page that renders GET /api/alerts (FR-220). No trigger controls."""
+    return FileResponse(STATIC_DIR / "alerts.html")
+
+
 # ---------- risk-change alerts (spec 002, contracts/http-api.md) ----------
 
 @app.get("/api/alerts")

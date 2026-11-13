@@ -27,6 +27,11 @@
   button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line);
            background: var(--panel); color: var(--text); padding: 7px 12px; }
   button:hover { border-color: var(--accent); }
+  .header-actions { display: flex; gap: 8px; }
+  a.btn { font-size: 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel);
+          color: var(--text); padding: 7px 12px; text-decoration: none; }
+  a.btn:hover { border-color: var(--accent); }
+  a.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   main { max-width: 900px; margin: 0 auto; padding: 16px 16px 140px; }
   .examples { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 20px; }
   .examples button { background: var(--accent-soft); border-color: transparent; font-size: 13px; }
@@ -69,7 +74,10 @@
     <h1>Hub Weather Risk</h1>
     <p>Ask which hubs are most exposed to weather disruption. Scores come from a deterministic engine; the AI explains them.</p>
   </div>
-  <button id="new" type="button" title="Start a new conversation">New conversation</button>
+  <div class="header-actions">
+    <a class="btn" href="/alerts">Alerts</a>
+    <button id="new" type="button" title="Start a new conversation">New conversation</button>
+  </div>
 </header>
 
 <main id="log" aria-live="polite">

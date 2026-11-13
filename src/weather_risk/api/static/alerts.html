@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Risk Alerts</title>
+<style>
+  /* Same tokens as the chat page (index.html). */
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #17202a; --muted: #5b6673; --line: #dde2e8;
+    --accent: #1f5fae; --accent-soft: #e7eff9;
+    --high: #1d7a46; --medium: #8a5300; --low: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12161b; --panel: #1a2027; --text: #e6ebf0; --muted: #98a3af; --line: #2b333d;
+      --accent: #6aa5ec; --accent-soft: #1d2a3a;
+      --high: #5cc28a; --medium: #e0a54a; --low: #f07b72;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+           padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  header h1 { font-size: 17px; margin: 0; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  .actions { display: flex; gap: 8px; }
+  a.btn, button { font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; border: 1px solid var(--line);
+                  background: var(--panel); color: var(--text); padding: 7px 12px; text-decoration: none; }
+  a.btn:hover, button:hover { border-color: var(--accent); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  main { max-width: 960px; margin: 0 auto; padding: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+  .card h2 { font-size: 14px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; font-size: 14px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; }
+  .tbl-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  caption { text-align: left; font-weight: 600; font-size: 14px; color: var(--muted); padding-bottom: 6px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 0 8px;
+           border: 1px solid var(--line); color: var(--text); background: var(--accent-soft); }
+  .status.delivered { color: var(--high); } .status.failed { color: var(--low); }
+  .status.not_configured, .status.pending { color: var(--muted); }
+  .empty, .meta { color: var(--muted); }
+  .error { color: var(--low); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Recent alerts</h1>
+    <p>Risk-change alerts: a hub's score moved by at least the threshold between checks. Read-only.</p>
+  </div>
+  <div class="actions">
+    <button id="reload" type="button">Reload</button>
+    <a class="btn" href="/">Back to chat</a>
+  </div>
+</header>
+
+<main>
+  <p id="status" class="meta" role="status" aria-live="polite">Loading…</p>
+  <section class="card" aria-labelledby="check-title">
+    <h2 id="check-title">Last check</h2>
+    <dl id="check"></dl>
+  </section>
+  <section class="card">
+    <div class="tbl-wrap">
+      <table>
+        <caption>Alerts, newest first</caption>
+        <thead>
+          <tr><th scope="col">Detected (UTC)</th><th scope="col">Hub</th><th scope="col">Score</th>
+              <th scope="col" class="num">Old</th><th scope="col" class="num">New</th>
+              <th scope="col" class="num">Change</th><th scope="col">Type</th><th scope="col">Delivery</th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p id="empty" class="empty" hidden>No alerts yet. A real check alerts only when data changes; the demo shows the path.</p>
+  </section>
+</main>
+
+<script>
+// Every value is rendered with textContent, never as HTML.
+const $ = (id) => document.getElementById(id);
+
+function cell(text, cls) {
+  const td = document.createElement("td");
+  td.textContent = text;
+  if (cls) td.className = cls;
+  return td;
+}
+
+function term(dl, label, value) {
+  const dt = document.createElement("dt"); dt.textContent = label;
+  const dd = document.createElement("dd"); dd.textContent = value;
+  dl.append(dt, dd);
+}
+
+function render(data) {
+  const dl = $("check"); dl.replaceChildren();
+  const c = data.last_check;
+  if (!c) {
+    term(dl, "Status", "No check has run yet.");
+  } else {
+    term(dl, "When", `${c.started_at} (${c.kind})`);
+    term(dl, "Result", `${c.status}, ${c.hubs_checked} hubs, ${c.alerts_raised} alerts` + (c.baseline ? ", baseline recorded" : ""));
+    if (c.fetch_failures.length) term(dl, "Fetch failures", c.fetch_failures.join(", ") + " (previous data kept)");
+  }
+  term(dl, "Threshold", `${data.threshold.toFixed(1)} points`);
+  term(dl, "Schedule", data.interval_hours > 0 ? `every ${data.interval_hours} hours` : "off (manual checks only)");
+  term(dl, "Webhook", data.webhook_configured ? "configured" : "not configured (alerts are recorded and logged only)");
+
+  const rows = $("rows"); rows.replaceChildren();
+  for (const a of data.alerts) {
+    const tr = document.createElement("tr");
+    const change = (a.change > 0 ? "+" : "") + a.change.toFixed(1);
+    tr.append(cell(a.detected_at.replace("T", " ").replace("Z", "")), cell(a.hub_name), cell(a.metric),
+              cell(a.old_value.toFixed(1), "num"), cell(a.new_value.toFixed(1), "num"), cell(change, "num"));
+    const type = document.createElement("td");
+    if (a.is_demo) {
+      const badge = document.createElement("span"); badge.className = "badge"; badge.textContent = "demo";
+      type.append(badge);
+    } else {
+      type.textContent = "real";
+    }
+    const status = a.delivery_status.replace("_", " ") + (a.delivery_error ? ` (${a.delivery_error})` : "");
+    tr.append(type, cell(status, "status " + a.delivery_status));
+    rows.append(tr);
+  }
+  $("empty").hidden = data.alerts.length > 0;
+}
+
+async function load() {
+  $("status").className = "meta";
+  $("status").textContent = "Loading…";
+  try {
+    const r = await fetch("/api/alerts");
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    render(await r.json());
+    $("status").textContent = `Updated ${new Date().toLocaleTimeString()}.`;
+  } catch (e) {
+    $("status").className = "error";
+    $("status").textContent = `Could not load alerts (${e.message}). Try Reload.`;
+  }
+}
+
+$("reload").addEventListener("click", load);
+load();
+</script>
+</body>
+</html>
