@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-13
 
-**Status**: Draft
+**Status**: Approved (2026-11-13)
 
 **Input**: User description: "Risk-change alert (bonus feature). A scheduled job recomputes every hub's risk scores and records them; when a hub's score changes by more than a threshold compared with the last recorded score, the system fires an alert. Alerts go to a webhook URL that comes only from configuration/environment (never from chat), are always logged, and are listed at GET /api/alerts. A manual trigger (CLI command and/or endpoint) runs the check on demand for demos. Because real data changes rarely, there must be a way to demonstrate a change (e.g. a demo command or test fixture). Score history persists across restarts (planned: SQLite on the Railway volume at DATA_DIR). The scheduler runs inside the single FastAPI process. Change-detection logic is developed test-first. Core behavior (chat, rankings, evals) must not change."
 
