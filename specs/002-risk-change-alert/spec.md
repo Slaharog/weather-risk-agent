@@ -105,7 +105,7 @@ Because real data rarely changes, the operator can demonstrate the full path (de
 
 **Detection**
 
-- **FR-201**: The system MUST run a risk-change check on a fixed schedule while the service is running, with the interval set by configuration (default: once a day).
+- **FR-201**: The system MUST run a risk-change check on a fixed schedule while the service is running, with the interval set by configuration. An interval of 0 disables the schedule (the local default, so local runs and evals never fetch live data by surprise); the deployed service uses once a day.
 - **FR-202**: A check MUST fetch the latest public data the same way the refresh command does, into the same refreshed-data location, so the fetched data also becomes what rankings and chat use. It then recomputes scores with the unchanged feature-001 engine and records every hub's scores with the time and the data retrieval dates. A check MUST never modify the committed seed snapshot.
 - **FR-203**: The scores watched MUST be each hub's overall score and each of its five hazard scores.
 - **FR-204**: A change MUST be detected when the absolute difference between a watched score and that hub's last recorded value for the same score is at least the change threshold. The threshold MUST be set by configuration, in score points on the 0-100 scale (default: 2.0 points).
@@ -165,7 +165,7 @@ Because real data rarely changes, the operator can demonstrate the full path (de
 - **One service instance.** The schedule runs inside the single service process; there is exactly one instance, so only one scheduler runs (Railway does not allow replicas with a volume anyway).
 - **Missed runs are not caught up.** If the service is down at a scheduled time, that run is skipped; the next run compares with the last recorded scores, so a change is still caught, only later.
 - **Threshold default 2.0 points** on the 0-100 scale: larger than rounding noise (scores are displayed to one decimal), small enough to catch a real data revision. A documented judgment call.
-- **Daily default interval.** The underlying data changes at most a few times a year, so checking more often only adds load on free public data providers.
+- **Daily interval when deployed.** The underlying data changes at most a few times a year, so checking more often only adds load on free public data providers.
 - **Webhook format.** A JSON POST with a human-readable `text` field (accepted by Slack-style incoming webhooks and generic catchers such as webhook.site) plus the structured alert fields.
 - **History size.** Kept small and bounded (recent checks and alerts only); long-term retention is out of scope.
 - **Out of scope:** alerts on forecasts or live weather events, per-user subscriptions, multiple destinations, email or SMS, alert acknowledgement, alerts inside the chat conversation itself, live push to the browser (the page loads on open and has a reload button), and triggering from the web page.

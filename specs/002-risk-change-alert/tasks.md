@@ -72,7 +72,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
 
 - [ ] T208 [P] [US1] TDD: write `tests/unit/test_alert_notify.py` (failing first), covering:
   - `build_payload(alert, threshold)` gives a `text` that starts with `[DEMO] ` only for demo alerts, says "rose" or "fell", and contains old, new and change exactly as stored, plus the data retrieval dates; the `alert` object has the fields from contracts/webhook.md.
-  - `deliver(url, payload, client)` with an `httpx.MockTransport`: a 200 gives `delivered`; 500, 500, 200 gives `delivered` after 3 attempts; three 500s give `failed` / `HTTP 500`; a timeout gives `failed` / `ConnectTimeout`-style class name. The URL never appears in the returned error.
+  - `deliver(url, payload, client)` with an `httpx.MockTransport`: a 200 gives `delivered`; 500, 500, 200 gives `delivered` after 3 attempts; three 500s give `failed` / `HTTP 500`; a timeout gives `failed` / `ConnectTimeout`-style class name. The URL never appears in the returned error, and (with `caplog`) never in any log line from `deliver` or `log_alert` (SC-206).
 - [ ] T209 [US1] Implement `src/weather_risk/alerts/notify.py`: `build_payload`, and `deliver` with a 5 s timeout, at most 3 attempts and 1 s / 2 s waits (the wait function is injectable so tests don't sleep). Also `log_alert(alert)`, which logs the `text` at WARNING and never the URL. Make T208 pass.
 - [ ] T210 [US1] Implement `src/weather_risk/alerts/service.py`:
   - a module `threading.Lock`;
@@ -133,10 +133,14 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
 - [ ] T220 Run the full verification, recording the output:
   - `uv run python -m pytest`, all green;
   - `uv run ruff check src scripts tests`;
-  - locally, `python -m weather_risk alerts demo`, then `alerts list`, then `alerts check` twice (a baseline, then 0 alerts);
-  - `uv run python -m weather_risk eval`, expecting 20/20 (FR-218, SC-205).
+  - `uv run python -m weather_risk eval`, expecting 20/20 (FR-218, SC-205). Run this **before** the local `alerts check`, which writes `data/live`, so the evals run on the seed;
+  - locally, `python -m weather_risk alerts demo`, then `alerts list`, then `alerts check` twice (a baseline, then 0 alerts); afterwards delete `data/live/` so local runs return to the seed.
 - [ ] T221 Code review of the 002 diff with the `code-reviewer` agent, plus a security pass on the token, the webhook and the SQL (`backend-api-security`). Fix confirmed findings test-first, and log them in `docs/decisions.md`.
 - [ ] T222 Update `docs/architecture.md` (the alerts component, SQLite storage, the scheduler, the `/alerts` page) and the README (an alerts section: config variables, demo flow, limits such as slow drift and no catch-up). Railway variables and the redeploy are covered in the later step 4, not here.
+
+---
+
+**Verified outside this task list:** SC-202 (a live demo alert within 1 minute) and SC-203 (alerts survive a redeploy) need the deployed service. They are checked in deploy step 4, using `quickstart.md` "Validate on Railway".
 
 ---
 
