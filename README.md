@@ -176,6 +176,11 @@ uv run python scripts/alert_demo.py https://weather-risk-agent-production.up.rai
 | `ALERT_WEBHOOK_URL` | unset (recorded and logged only) | a webhook.site URL |
 | `ALERT_ADMIN_TOKEN` | unset (trigger endpoints disabled) | a random 43-character token |
 
+**Verified live (2026-11-13).**
+- The first scheduled check after the deploy recorded a baseline: 16 hubs, 0 alerts, no fetch failures, about 4 minutes.
+- `scripts/alert_demo.py` then produced exactly the 2 demo alerts, both delivered to the webhook and shown on `/alerts`. A demo started while that check was running got `409`, as designed.
+- `POST /api/alerts/check` and `/api/alerts/demo` return `403` with no token or a wrong one.
+
 ---
 
 ## Voice input

@@ -149,3 +149,11 @@ Two read-only review agents ran on the finished alert code: a security reviewer 
 - **Never auto-send.** Only the Send button sends. Pressing Send mid-dictation *aborts* the recognizer, which discards its results; stopping it instead could deliver a late final result into the cleared box.
 - **Testability:** all logic is in `initVoice(Recognition)`, so a scripted Chrome check drove it with a fake recognizer (live text, append, toggle, errors, fallback, no auto-send). A real-microphone try is left to the user on the https deployment.
 - **No speckit-analyze round** for this feature, at the user's direction under the deadline: it is one file and six tasks.
+
+## 2026-11-13 - Redeploy with features 002 and 003 (step 4)
+
+- The user set `ALERT_INTERVAL_HOURS=24`, `ALERT_WEBHOOK_URL` (webhook.site) and `ALERT_ADMIN_TOKEN` as Railway variables. The token was generated locally and never printed in the session.
+- **Smoke check:** health, the Midwest winter ranking (Minneapolis 51.2, Detroit 28.5, Chicago 24.4) and one chat answer all passed.
+- **Scheduler:** check #1 ran by itself after startup and recorded a baseline (16 hubs, 0 alerts, no fetch failures, 3 min 50 s).
+- **Demo:** the first try returned 409 because check #1 was still running, which is the intended lock behavior. After it finished, demo check #2 raised and delivered exactly 2 alerts: Dallas heat 76.6 → 84.1 and Houston hurricane 65.1 → 60.1.
+- **Auth:** both trigger endpoints return 403 with no token and with a wrong token.
