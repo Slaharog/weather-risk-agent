@@ -4,9 +4,9 @@ One `POST` per alert to `ALERT_WEBHOOK_URL`, with `Content-Type: application/jso
 
 ```json
 {
-  "text": "[DEMO] Dallas heat score rose 7.5 points: 76.6 -> 84.1 (threshold 2.0). Data: FEMA NRI December 2025 release (retrieved 2026-11-13); Open-Meteo ERA5 2016-01-01 to 2025-12-31 (retrieved 2026-11-13).",
+  "text": "[DEMO] Dallas, TX heat score rose 7.5 points: 76.6 -> 84.1 (threshold 2.0). Data: FEMA NRI December 2025 release (retrieved 2026-11-13); Open-Meteo ERA5 2016-01-01 to 2025-12-31 (retrieved 2026-11-13).",
   "alert": {
-    "id": 3, "hub_id": "dallas", "hub_name": "Dallas", "metric": "heat",
+    "id": 3, "hub_id": "dallas", "hub_name": "Dallas, TX", "metric": "heat",
     "old_value": 76.6, "new_value": 84.1, "change": 7.5, "threshold": 2.0,
     "detected_at": "2026-11-13T17:40:00Z", "is_demo": true,
     "data_retrieved": [ ... ]

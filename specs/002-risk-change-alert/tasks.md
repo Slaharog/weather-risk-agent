@@ -74,7 +74,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
   - `build_payload(alert, threshold)` gives a `text` that starts with `[DEMO] ` only for demo alerts, says "rose" or "fell", and contains old, new and change exactly as stored, plus the data retrieval dates; the `alert` object has the fields from contracts/webhook.md.
   - `deliver(url, payload, client)` with an `httpx.MockTransport`: a 200 gives `delivered`; 500, 500, 200 gives `delivered` after 3 attempts; three 500s give `failed` / `HTTP 500`; a timeout gives `failed` / `ConnectTimeout`-style class name. The URL never appears in the returned error, and (with `caplog`) never in any log line from `deliver` or `log_alert` (SC-206).
 - [X] T209 [US1] Implement `src/weather_risk/alerts/notify.py`: `build_payload`, and `deliver` with a 5 s timeout, at most 3 attempts and 1 s / 2 s waits (the wait function is injectable so tests don't sleep). Also `log_alert(alert)`, which logs the `text` at WARNING and never the URL. Make T208 pass.
-- [ ] T210 [US1] Implement `src/weather_risk/alerts/service.py`:
+- [X] T210 [US1] Implement `src/weather_risk/alerts/service.py`:
   - a module `threading.Lock`;
   - `run_check(kind, settings, fetch=fetch_all) -> CheckSummary`, following the lifecycle in data-model.md §4. If the lock is busy it raises `CheckBusy`. The fetch is injectable for tests. A scoring failure records the check as `failed` with no score records.
   - `CheckSummary` (a Pydantic model) as in contracts/http-api.md.

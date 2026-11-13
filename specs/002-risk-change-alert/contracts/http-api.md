@@ -20,7 +20,7 @@ Response `200`:
   },
   "alerts": [
     {
-      "id": 3, "check_id": 6, "hub_id": "dallas", "hub_name": "Dallas", "metric": "heat",
+      "id": 3, "check_id": 6, "hub_id": "dallas", "hub_name": "Dallas, TX", "metric": "heat",
       "old_value": 76.6, "new_value": 84.1, "change": 7.5,
       "detected_at": "2026-11-13T17:40:00Z", "is_demo": true,
       "delivery_status": "delivered", "delivery_error": null,
