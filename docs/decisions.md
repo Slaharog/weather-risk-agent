@@ -38,3 +38,8 @@ Each entry records what was chosen, the alternatives considered, and why.
 - **16 hubs** at real logistics cities (7 Midwest, 5 South, 3 West, 1 Northeast). Alternatives: 8 hubs (rankings too thin) or 25+ (more data to verify, no demo gain). The company supplied no list, so this is a stated assumption.
 - **Absolute scoring.** Each hazard is scored against a fixed national yardstick, so a hub's score does not move when the hub list changes, and a score change (for the later alert feature) means the data changed. Alternative: min-max relative to our hubs, simpler but unstable and it exaggerates small differences. Cost: the thresholds are our judgment calls and must be documented.
 - **Five hazards:** winter, hurricane/tropical wind, flood, extreme heat, severe storms. Alternative: only the three named in the brief, rejected because "why is Dallas high?" cannot be answered truthfully without heat and severe storms.
+
+## 2026-11-13 - Spec 001: scoring visible without the LLM (FR-029)
+
+- **Chosen:** a direct API endpoint and a CLI command show rankings and breakdowns with no LLM involved; the agent tools call the same functions.
+- **Why:** proves the deterministic engine stands alone (assignment: "not only LLM output") and gives a demo path if the LLM is unavailable.

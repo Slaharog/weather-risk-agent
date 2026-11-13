@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-13
 
-**Status**: Draft
+**Status**: Approved (2026-11-13)
 
 **Input**: User description: "Core weather risk agent: a fixed list of US distribution hubs with coordinates and regions; ingestion of public weather and hazard data with a committed seed snapshot of real API responses plus a refresh command; deterministic, decomposable per-hub risk scoring (weighted per-hazard components) and statistics such as percentage of snow days; an LLM agent (OpenAI, hand-written tool-calling loop, strict JSON schema final answer with data_sources, assumptions, limitations, confidence) that answers ranking, comparison, statistic, and "why" questions with conversational follow-ups; exposed through a FastAPI chat API used by a simple web chat page; plus a runnable eval set of 15-25 cases. Out of scope for this spec: scheduled risk-change alerts and voice input (separate specs)."
 
@@ -161,6 +161,7 @@ The operator starts the system from a fresh copy of the repository, uses it with
 **Interface**
 
 - **FR-023**: The system MUST expose the agent through a documented API that accepts a conversation identifier and a message and returns the structured answer.
+- **FR-029**: Scores, rankings, and breakdowns MUST be viewable without the language model, through a direct API endpoint (for example, all hubs ranked by a chosen hazard) and a command-line command that prints the ranking table. The agent's capabilities MUST use the same scoring functions, so both paths always show identical numbers.
 - **FR-024**: The system MUST provide a web chat page that uses that API, shows the narrative, the numbers table, and the "about this answer" panel, and lets the analyst start a new conversation.
 
 **Evaluation and documentation**
