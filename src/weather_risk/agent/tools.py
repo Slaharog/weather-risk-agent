@@ -14,12 +14,16 @@ from dataclasses import dataclass, field
 from pydantic import BaseModel, ValidationError
 
 from weather_risk.agent.schemas import (
+    BreakdownArgs,
+    CompareArgs,
     CoverageArgs,
+    RankArgs,
+    StatArgs,
     Table,
     openai_strict_schema,
 )
 from weather_risk.hubs import Region
-from weather_risk.scoring.engine import Engine, UnknownHub
+from weather_risk.scoring.engine import Component, Engine, UnknownHub
 from weather_risk.scoring.stats import FIRST_YEAR, LAST_YEAR, STATS
 
 HAZARD_DEFINITIONS = {
@@ -34,6 +38,29 @@ HAZARD_DEFINITIONS = {
 def r1(x: float) -> float:
     """Display rounding. The model sees the same rounded values as the user's tables."""
     return round(x, 1)
+
+
+def raw(x: float) -> float:
+    """Raw source values (events/yr, days/yr) to 3 significant figures, as displayed."""
+    return float(f"{x:.3g}")
+
+
+def _short(label: str) -> str:
+    return label.split(" (")[0]
+
+
+def _component(c: Component) -> dict:
+    return {"indicator": _short(c.label), "raw_value": raw(c.raw_value), "unit": c.raw_unit,
+            "indicator_score": r1(c.indicator_score), "weight": round(c.weight, 2),
+            "contribution": r1(c.contribution)}
+
+
+def _component_text(c: Component) -> str:
+    return f"{_short(c.label)}: {raw(c.raw_value)} {c.raw_unit} (+{r1(c.contribution)})"
+
+
+def _metric_name(metric: str) -> str:
+    return metric.replace("_", " ")
 
 
 @dataclass
@@ -107,8 +134,110 @@ class ToolRegistry:
                       rows=[[h["name"], h["region"]] for h in hubs])
         return self._outcome("list_coverage", args, data, table, [])
 
+    def rank_hubs(self, args: RankArgs) -> ToolOutcome:
+        e = self.engine
+        rows = e.rank_hubs(args.hazard, region=args.region, limit=args.limit)
+        data = [{"rank": r.rank, "hub_id": r.hub_id, "hub": r.name, "region": r.region,
+                 "score": r1(r.score), "tied": r.tied,
+                 "top_drivers": [{"driver": _short(d.label), "contribution": r1(d.contribution)}
+                                 for d in r.top_drivers]} for r in rows]
+        scope = f"{args.region.value} hubs" if args.region else "All hubs"
+        table = Table(
+            title=f"{scope} ranked by {_metric_name(args.hazard)} score (0-100)",
+            columns=["Rank", "Hub", "Region", "Score", "Top drivers"],
+            rows=[[d["rank"], d["hub"], d["region"], d["score"],
+                   "; ".join(f"{t['driver']} +{t['contribution']}" for t in d["top_drivers"])]
+                  for d in data])
+        notes = ["Tied hubs share a score; order among them is alphabetical."] if any(
+            r.tied for r in rows) else []
+        missing = any(e.scores[r.hub_id].hazards[h].missing for r in rows
+                      for h in e.scores[r.hub_id].hazards)
+        return self._outcome("rank_hubs", args, data, table, notes, missing)
+
+    def get_hub_breakdown(self, args: BreakdownArgs) -> ToolOutcome:
+        b = self.engine.get_hub_breakdown(args.hub_id.value)
+        data = {
+            "hub": b.name, "region": b.region, "overall_score": r1(b.overall_score),
+            "overall_rank": b.overall_rank, "hub_count": b.hub_count,
+            "hazards": [{"hazard": h.hazard.value, "score": r1(h.score), "rank": h.rank,
+                         "components": [_component(c) for c in
+                                        sorted(h.components, key=lambda c: -c.contribution)],
+                         "missing": h.missing} for h in b.hazards],
+        }
+        table = Table(
+            title=f"{b.name}: overall {r1(b.overall_score)}, rank {b.overall_rank} of {b.hub_count}",
+            columns=["Hazard", "Score", "Rank", "Largest components"],
+            rows=[[_metric_name(h.hazard.value), r1(h.score), h.rank, "; ".join(
+                _component_text(c) for c in sorted(h.components, key=lambda c: -c.contribution)[:2])]
+                for h in b.hazards])
+        notes = ["Overall = average of the five hazard scores. Each hazard score = sum of its "
+                 "components' contributions."]
+        missing = any(h.missing for h in b.hazards)
+        return self._outcome("get_hub_breakdown", args, data, table, notes, missing)
+
+    def compare_hubs(self, args: CompareArgs) -> ToolOutcome:
+        e = self.engine
+        c = e.compare_hubs([h.value for h in args.hub_ids], list(args.hazards))
+        names = {r.hub_id: r.name for r in c.rows}
+        data = {
+            "metrics": c.metrics,
+            "hubs": [{"hub": r.name, "scores": {
+                m: {"score": r1(cell.score), "components": [_component(x) for x in sorted(
+                    cell.components, key=lambda x: -x.contribution)[:3]]}
+                for m, cell in r.scores.items()}} for r in c.rows],
+            "most_exposed": {m: names.get(h, "tie") for m, h in c.most_exposed.items()},
+        }
+        table = Table(
+            title="Comparison (scores 0-100)",
+            columns=["Hazard", *[r.name for r in c.rows], "Most exposed"],
+            rows=[[_metric_name(m), *[r1(r.scores[m].score) for r in c.rows],
+                   names.get(c.most_exposed[m], "tie")] for m in c.metrics])
+        missing = any(e.scores[r.hub_id].hazards[h].missing for r in c.rows
+                      for h in e.scores[r.hub_id].hazards)
+        return self._outcome("compare_hubs", args, data, table, [], missing)
+
+    def get_weather_stat(self, args: StatArgs) -> ToolOutcome:
+        hub = self.engine.hubs[args.hub_id.value]
+        s = self.engine.weather_stat(hub.id, args.stat.value, args.year)
+        data = {"hub": hub.name, "statistic": s.stat, "value": r1(s.value), "unit": s.unit,
+                "period": f"{s.period_start} to {s.period_end}",
+                "qualifying_days": s.qualifying_days, "days_with_data": s.days_with_data,
+                "missing_days": s.missing_days, "definition": s.definition}
+        table = Table(
+            title=f"{hub.name}, {args.year}: {_metric_name(s.stat)}",
+            columns=["Value", "Unit", "Qualifying days", "Days with data", "Missing days", "Definition"],
+            rows=[[r1(s.value), s.unit, "-" if s.qualifying_days is None else s.qualifying_days,
+                   s.days_with_data, s.missing_days, s.definition]])
+        notes = ["Source: ERA5 reanalysis at about 25 km resolution; values are grid estimates, "
+                 "not station readings."]
+        return self._outcome("get_weather_stat", args, data, table, notes, s.missing_days > 0)
+
 
 TOOLS: dict[str, ToolDef] = {
+    "rank_hubs": ToolDef(
+        RankArgs,
+        "Rank hubs by exposure score (0-100) for one hazard or 'overall', optionally within one "
+        "US Census region. Returns ranks, scores and the two largest drivers per hub.",
+        ToolRegistry.rank_hubs,
+    ),
+    "get_hub_breakdown": ToolDef(
+        BreakdownArgs,
+        "Everything behind one hub's score: overall score and rank, each hazard's score and "
+        "rank, and every component with its raw value. Use for 'why is X high/low' questions.",
+        ToolRegistry.get_hub_breakdown,
+    ),
+    "compare_hubs": ToolDef(
+        CompareArgs,
+        "Compare 2-6 hubs on 1-6 hazards (or 'overall'): scores, main components, and which "
+        "hub is most exposed per hazard.",
+        ToolRegistry.compare_hubs,
+    ),
+    "get_weather_stat": ToolDef(
+        StatArgs,
+        "One observed weather statistic for one hub and one calendar year (2016-2025), with the "
+        "counts behind it. Example: snowfall_days_pct for denver in 2025.",
+        ToolRegistry.get_weather_stat,
+    ),
     "list_coverage": ToolDef(
         CoverageArgs,
         "List the hubs, regions, hazards, statistics and data period this system covers. "

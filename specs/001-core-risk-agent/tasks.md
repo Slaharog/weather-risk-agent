@@ -135,10 +135,10 @@ Single project: `src/weather_risk/`, `tests/`, `evals/`, `config/`, `data/` at r
 
 **Independent Test**: quickstart V4 questions 1, 3, 4, 5 each produce the expected tool call and tables matching the CLI.
 
-- [ ] T047 [US1] Add the `rank_hubs(hazard, region, limit)` tool to `src/weather_risk/agent/tools.py` (calls `engine.rank_hubs`; table: Rank, Hub, Score, Top driver)
-- [ ] T048 [US2] Add the `get_hub_breakdown(hub_id)` tool to `src/weather_risk/agent/tools.py` (table: hazard, score, rank, largest components with raw values)
-- [ ] T049 [US3] Add the `compare_hubs(hub_ids, hazards)` tool to `src/weather_risk/agent/tools.py` (table: hub × hazard scores, most exposed per hazard)
-- [ ] T050 [US4] Add the `get_weather_stat(hub_id, stat, year)` tool to `src/weather_risk/agent/tools.py` (table: value, qualifying days, days with data, missing days, period, definition)
+- [X] T047 [US1] Add the `rank_hubs(hazard, region, limit)` tool to `src/weather_risk/agent/tools.py` (calls `engine.rank_hubs`; table: Rank, Hub, Score, Top driver)
+- [X] T048 [US2] Add the `get_hub_breakdown(hub_id)` tool to `src/weather_risk/agent/tools.py` (table: hazard, score, rank, largest components with raw values)
+- [X] T049 [US3] Add the `compare_hubs(hub_ids, hazards)` tool to `src/weather_risk/agent/tools.py` (table: hub × hazard scores, most exposed per hazard)
+- [X] T050 [US4] Add the `get_weather_stat(hub_id, stat, year)` tool to `src/weather_risk/agent/tools.py` (table: value, qualifying days, days with data, missing days, period, definition)
 
 ---
 
