@@ -206,6 +206,8 @@ def alerts(limit: int = Query(50, ge=1, le=50)) -> dict:
 # Triggering is the only way to make the service fetch from the public APIs on demand, so it needs
 # the operator token and has its own small rate limit (research.md §6, FR-215, FR-219).
 trigger_limiter = RateLimiter(per_minute=2, per_day=50)
+# Wrong tokens are throttled too (security review, CWE-307): 5 failures per minute per client.
+auth_failure_limiter = RateLimiter(per_minute=5, per_day=500)
 
 
 def _authorize_trigger(http: Request) -> None:
@@ -214,6 +216,8 @@ def _authorize_trigger(http: Request) -> None:
     expected = f"Bearer {token.get_secret_value()}" if token else None
     # Same 403 for "no token configured" and "wrong token"; constant-time comparison.
     if expected is None or not hmac.compare_digest(supplied.encode(), expected.encode()):
+        if not auth_failure_limiter.allow(client_ip(http)):
+            raise HTTPException(status_code=429, detail="Too many failed attempts. Please wait.")
         raise HTTPException(status_code=403, detail="Triggering checks is not allowed.")
     if not trigger_limiter.allow(client_ip(http)):
         raise HTTPException(status_code=429, detail="Too many triggered checks. Please wait a minute.")

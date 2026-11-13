@@ -108,3 +108,26 @@ def test_a_check_is_due_when_none_ran_or_the_interval_has_passed(history):
     record(history, kind="demo", at=T0 + timedelta(hours=30))  # demos never count
     assert history.is_due(T0 + timedelta(hours=23, minutes=59), interval_hours=24) is False
     assert history.is_due(T0 + timedelta(hours=24), interval_hours=24) is True
+
+
+def test_alerts_and_unreferenced_checks_are_pruned(history, monkeypatch):
+    import weather_risk.alerts.history as module
+
+    monkeypatch.setattr(module, "KEEP_ALERTS", 3)
+    monkeypatch.setattr(module, "KEEP_CHECKS", 3)
+    for i in range(6):
+        record(history, kind="demo",
+               changes=[Change(hub_id=f"h{i}", metric="heat", old=0.0, new=5.0, change=5.0)])
+    assert [a["hub_id"] for a in history.list_alerts()] == ["h5", "h4", "h3"]
+    assert history.check_count() == 3
+
+
+def test_schema_is_created_once_per_file(tmp_path, monkeypatch):
+    import weather_risk.alerts.history as module
+
+    calls = []
+    real = module._create_schema
+    monkeypatch.setattr(module, "_create_schema", lambda path: (calls.append(path), real(path)))
+    History(tmp_path / "a.sqlite")
+    History(tmp_path / "a.sqlite")  # e.g. the next GET /api/alerts
+    assert len(calls) == 1

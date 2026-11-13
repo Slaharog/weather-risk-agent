@@ -25,6 +25,7 @@ class RateLimiter:
             day = int(now // 86_400)
             if day != self._day:
                 self._day, self._day_count = day, 0
+                self._recent.clear()  # forget yesterday's clients, so the map cannot grow forever
             if self._day_count >= self.per_day:
                 return False
             recent = self._recent[client]

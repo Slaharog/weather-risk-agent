@@ -26,6 +26,11 @@ def main() -> int:
         print("ALERT_ADMIN_TOKEN is not set in the environment or .env.", file=sys.stderr)
         return 1
 
+    # The token is a credential: send it only over TLS (plain http allowed for a local server).
+    base = args.base_url.rstrip("/")
+    if not base.startswith(("https://", "http://localhost", "http://127.0.0.1")):
+        print("Refusing to send the token: the URL must start with https://.", file=sys.stderr)
+        return 1
     endpoint = "check" if args.check else "demo"
     url = f"{args.base_url.rstrip('/')}/api/alerts/{endpoint}"
     with httpx.Client(timeout=180, verify=ssl.create_default_context()) as http:  # a check takes ~1 min

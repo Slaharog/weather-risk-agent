@@ -15,6 +15,9 @@ from pathlib import Path
 from weather_risk.alerts.detect import Change, Scores
 
 KEEP_REAL_CHECKS = 30
+KEEP_ALERTS = 500  # the list shows at most 50; older rows are only kept as a short audit trail
+KEEP_CHECKS = 500
+_ready: set[Path] = set()  # files whose schema was created by this process
 DELIVERY_STATUSES = ("pending", "delivered", "failed", "not_configured")
 
 SCHEMA = """
@@ -60,9 +63,9 @@ LAST_REAL_OK = "SELECT MAX(id) FROM checks WHERE kind != 'demo' AND status = 'ok
 class History:
     def __init__(self, path: Path):
         self.path = path
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as db:
-            db.executescript(SCHEMA)
+        if path.resolve() not in _ready:  # once per process, not on every GET /api/alerts
+            _create_schema(path)
+            _ready.add(path.resolve())
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
@@ -103,6 +106,12 @@ class History:
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (check_id, c.hub_id, c.metric, c.old, c.new, c.change, started_at,
                  int(kind == "demo"), sources, delivery_status)).lastrowid for c in changes]
+            db.execute("DELETE FROM alerts WHERE id NOT IN"
+                       " (SELECT id FROM alerts ORDER BY id DESC LIMIT ?)", (KEEP_ALERTS,))
+            db.execute(  # old checks, unless rows still point at them
+                "DELETE FROM checks WHERE id NOT IN (SELECT id FROM checks ORDER BY id DESC LIMIT ?)"
+                " AND id NOT IN (SELECT check_id FROM score_records)"
+                " AND id NOT IN (SELECT check_id FROM alerts)", (KEEP_CHECKS,))
         return check_id, alert_ids
 
     def last_real_scores(self) -> Scores:
@@ -146,9 +155,22 @@ class History:
         last = datetime.strptime(row["started_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=now.tzinfo)
         return now >= last + timedelta(hours=interval_hours)
 
+    def check_count(self) -> int:
+        with self._connect() as db:
+            return db.execute("SELECT COUNT(*) FROM checks").fetchone()[0]
+
     def score_record_count(self) -> int:
         with self._connect() as db:
             return db.execute("SELECT COUNT(*) FROM score_records").fetchone()[0]
+
+
+def _create_schema(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    db = sqlite3.connect(path)
+    try:
+        db.executescript(SCHEMA)
+    finally:
+        db.close()
 
 
 def _check_status(status: str) -> None:

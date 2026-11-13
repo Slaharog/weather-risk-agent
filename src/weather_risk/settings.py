@@ -9,7 +9,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=PROJECT_ROOT / ".env", extra="ignore")
+    # hide_input_in_errors: a bad value (e.g. a webhook URL or API key) is never echoed in an error.
+    model_config = SettingsConfigDict(env_file=PROJECT_ROOT / ".env", extra="ignore",
+                                      hide_input_in_errors=True)
 
     # Only chat and evals need the key; the scoring engine, CLI and LLM-free API work without it.
     openai_api_key: str | None = None
@@ -41,6 +43,26 @@ class Settings(BaseSettings):
     def _blank_is_unset(cls, value):
         # An empty variable (e.g. ALERT_WEBHOOK_URL= in .env) means "not configured".
         return None if isinstance(value, str) and not value.strip() else value
+
+    @field_validator("alert_admin_token")
+    @classmethod
+    def _token_is_long(cls, value: SecretStr | None):
+        # Security review: a short token could be guessed. secrets.token_urlsafe(32) gives 43.
+        if value is not None and len(value.get_secret_value()) < 32:
+            raise ValueError("ALERT_ADMIN_TOKEN must be at least 32 characters")
+        return value
+
+    @field_validator("alert_webhook_url")
+    @classmethod
+    def _webhook_is_https(cls, value: SecretStr | None):
+        # Alerts leave the service, so require TLS (localhost allowed for testing). Validated
+        # after SecretStr wrapping, so a validation error shows '**********', not the URL.
+        if value is not None:
+            url = value.get_secret_value()
+            local = url.startswith(("http://localhost", "http://127.0.0.1"))
+            if not (url.startswith("https://") or local):
+                raise ValueError("ALERT_WEBHOOK_URL must start with https://")
+        return value
 
     @property
     def alerts_db(self) -> Path:

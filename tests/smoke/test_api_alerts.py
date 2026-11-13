@@ -66,7 +66,7 @@ def test_alerts_page_is_served_and_linked_from_the_chat_header():
 
 # ---------- POST /api/alerts/check (T217) ----------
 
-TOKEN = "test-operator-token"
+TOKEN = "test-operator-token-0123456789abcdef"  # >= 32 characters
 
 
 @pytest.fixture
@@ -130,3 +130,13 @@ def test_demo_gives_two_labeled_alerts_and_changes_nothing_real(trigger):
 
     real = client.post("/api/alerts/check", headers=auth()).json()  # unchanged data
     assert real["baseline"] is True and real["alerts_raised"] == 0  # the demo left no history
+
+
+# ---------- security review fixes (T221) ----------
+
+def test_repeated_wrong_tokens_are_throttled(trigger, monkeypatch):
+    from weather_risk.api.limits import RateLimiter
+
+    monkeypatch.setattr(app_module, "auth_failure_limiter", RateLimiter(per_minute=5, per_day=500))
+    codes = [client.post("/api/alerts/demo", headers=auth("wrong")).status_code for _ in range(6)]
+    assert codes == [403] * 5 + [429]
