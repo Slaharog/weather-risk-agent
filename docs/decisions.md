@@ -43,3 +43,10 @@ Each entry records what was chosen, the alternatives considered, and why.
 
 - **Chosen:** a direct API endpoint and a CLI command show rankings and breakdowns with no LLM involved; the agent tools call the same functions.
 - **Why:** proves the deterministic engine stands alone (assignment: "not only LLM output") and gives a demo path if the LLM is unavailable.
+
+## 2026-11-13 - Plan 001: data sources and scoring
+
+- **Sources:** Open-Meteo ERA5 daily history (keyless; non-commercial terms) and FEMA National Risk Index Dec 2025 county event frequencies via FEMA's public ArcGIS service (keyless). Rejected NOAA station data (token, gaps) and FEMA risk scores (they mix in property value and population, so they measure county loss, not hub exposure).
+- **Scoring:** each hazard is a weighted sum of FEMA national frequency percentiles and observed-day indicators on fixed caps; overall = mean of 5 hazards. Caps and weights are documented judgment calls.
+- **Model:** OpenAI Responses API, default `gpt-6.1-sol` (OpenAI's "balance intelligence and cost" pick), configurable; reasoning effort instead of temperature.
+- **Storage:** JSON files only for 001; SQLite deferred to the alert spec.

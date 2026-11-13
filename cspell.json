@@ -1,0 +1,11 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "Moveo", "speckit", "evals", "Evals", "pytest", "Pydantic", "pydantic", "fastapi", "uvicorn",
+    "httpx", "typer", "pyyaml", "tomllib", "FEMA", "NOAA", "NCEI", "Meteo", "Meteostat", "HURDAT",
+    "AFREQ", "HRCN", "IFLD", "RFLD", "CFLD", "WNTW", "ISTM", "CWAV", "HWAV", "TRND", "SWND",
+    "STCOFIPS", "STATEABBRV", "FIPS", "Dade", "geospatial", "inspectable", "unvalidated",
+    "negotiables", "pyproject", "typesafe", "Railway", "Railpack", "wra"
+  ]
+}
