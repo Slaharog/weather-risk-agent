@@ -6607,6 +6607,81 @@ The deployment section already exists. I'll fix one tense ("will run"), then exp
 
 > 🔧 `Bash` {"command": "cd \"C:/Users/yt141/OneDrive/Desktop/interview_for_moveo\" && sed -i 's/keeps state in memory and will run a background scheduler for alerts;/keeps state in memory and runs a background scheduler for alerts (verified live: the scheduled baseline check ran after startup, and alerts survived a redeploy);/' docs/architecture.md && grep -c \"verified live\" docs/architecture.md && export  …
 
+**Assistant:**
+
+Next is the secret check. It compares the export against the real `.env` values and prints only counts.
+
+> 🔧 `Bash` {"command": "cd \"C:/Users/yt141/OneDrive/Desktop/interview_for_moveo\" && PYTHONIOENCODING=utf-8 uv run python -c \"\nimport re\nfrom pathlib import Path\nenv={}\nfor line in Path('.env').read_text(encoding='utf-8').splitlines():\n    if '=' in line and not line.lstrip().startswith('#'):\n        k,v=line.split('=',1); env[k.strip()]=v.strip().strip('\\\"').strip(\\\"'\\\")\nfiles=[p for p in Pat …
+
+**Assistant:**
+
+The export is clean: 0 hits for the OpenAI key, the admin token, any `sk-` key, any webhook.site URL, and any personal email. Committing and pushing now.
+
+> 🔧 `Bash` {"command": "cd \"C:/Users/yt141/OneDrive/Desktop/interview_for_moveo\" && git add README.md docs/ && git status --short | head -15 && git commit -q -m \"docs: final live verification (persistence, webhook, real-mic voice) and session export\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\" && git push -q origin main 2>&1 | tail -2; git log --oneline -1; git status --short | wc -l", "de …
+
+**Assistant:**
+
+All steps are done, and the final commit `b39d38f` is pushed to `main`. The working tree is clean.
+
+**Live checks on the deployed site:**
+- **Smoke check:** health, rankings and a chat answer all passed.
+- **Scheduler:** the first scheduled check ran by itself after the deploy and recorded the starting scores (16 hubs, no fetch failures).
+- **Demo:** it produced exactly the 2 alerts (Dallas heat +7.5, Houston hurricane −5.0). Both reached the webhook, and you confirmed they arrived on webhook.site.
+- **Token check:** both trigger endpoints return 403 with no token or a wrong token.
+- **Alerts survive a redeploy:** after the next deploy, the 2 checks and 2 alerts were still there. No extra scheduled check ran.
+- **Voice:** your real-microphone try in Chrome worked.
+
+The README, `docs/decisions.md` and `docs/architecture.md` now record these results.
+
+**Session export:** I re-ran `scripts/export_session.py`; it exported 7 transcripts. I checked them for secrets: the OpenAI key, `ALERT_ADMIN_TOKEN`, webhook URLs and personal emails all had 0 matches.
+
+The export only includes the conversation up to its own run, so these last few messages are not in it. If you want them in the submission, run `python scripts/export_session.py` once more right before you submit, then commit and push.
+
+**User:**
+
+before the finish can you explain me how the mcp works?
+
+> 🔧 `Bash` {"command": "cd \"C:/Users/yt141/OneDrive/Desktop/interview_for_moveo\" && cat .mcp.json; echo ---; grep -rn -i \"mcp\" --include=*.py --include=*.md --include=*.toml . 2>/dev/null | grep -v \"docs/session\\|\\.venv\\|\\.claude/\" | head -15", "description": "Show MCP config and any MCP references in repo"}
+
+**Assistant:**
+
+In this project, MCP is a **development tool for me, not part of the app**. The deployed agent doesn't use it. That distinction is worth knowing for the interview.
+
+**What MCP is**
+
+MCP (Model Context Protocol) is an open standard for connecting an AI client to outside tools and data. It has two sides:
+- **The client** is the AI app, here Claude Code.
+- **The server** is a small program that offers tools, such as "search the docs".
+
+Any server that follows the protocol works with any MCP client, so nobody writes a custom integration per pair.
+
+**How it works here: `.mcp.json`**
+
+```json
+"context7": { "type": "stdio", "command": "cmd", "args": ["/c", "npx", "-y", "@upstash/context7-mcp"] }
+```
+
+1. **Start.** When the session opens, Claude Code runs that command, which launches the Context7 server as a child process on your machine.
+2. **Transport.** `stdio` means the two programs talk over the child process's stdin and stdout. The messages are JSON-RPC 2.0. A remote server would use HTTP instead.
+3. **Handshake.** The client sends `initialize`, then `tools/list`. The server answers with its tools, each with a name, a description and a JSON Schema for its inputs. Context7 offers `resolve-library-id` and `query-docs`.
+4. **Use.** The tool descriptions go into my context. When I need current docs, I issue a tool call. Claude Code sends it to the server as `tools/call` with JSON arguments, and the server fetches the docs from Context7's index and returns text. That text becomes a tool result I read.
+
+**What it was used for in this project**
+- **Context7:** checking current docs before writing code. For example, I checked the browser speech API's event fields and error codes for feature 003. This follows the CLAUDE.md rule "check docs before relying on memory".
+- **Claude in Chrome**, another MCP server: it drove a real Chrome tab for the scripted voice check with the fake recognizer.
+
+**How the app's agent differs**
+
+The weather agent uses **OpenAI function calling**, not MCP. Its tools are defined in our own Python code and run inside our own process. The model only chooses which tool to call and with what arguments, and the code checks those arguments against a strict JSON schema. The idea is the same as MCP (the model asks, code executes), but there is no protocol, no separate server and no network hop. That keeps it simple and testable.
+
+**If they ask how to extend it:** the scoring engine could be wrapped as an MCP server, exposing the same tools such as rank, breakdown and stat. Then any MCP client, like Claude Desktop or an IDE, could query hub risk directly. The deterministic engine would stay the single source of numbers, and only the transport would change. That would be a small addition, since the tool functions already exist.
+
+**User:**
+
+run the export again and push
+
+> 🔧 `Bash` {"command": "cd \"C:/Users/yt141/OneDrive/Desktop/interview_for_moveo\" && export PYTHONIOENCODING=utf-8 && uv run python scripts/export_session.py 2>&1 | tail -2 && uv run python -c \"\nimport re\nfrom pathlib import Path\nenv={}\nfor line in Path('.env').read_text(encoding='utf-8').splitlines():\n    if '=' in line and not line.lstrip().startswith('#'):\n        k,v=line.split('=',1); env[k.stri …
+
 ---
 
 # Transcript: `agent-a263d1ca15df592f9.jsonl`
