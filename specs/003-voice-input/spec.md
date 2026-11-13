@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-13
 
-**Status**: Draft
+**Status**: Approved (2026-11-13)
 
 **Input**: User description: "Voice input for the chat page (bonus feature). A microphone button next to the message box lets the analyst speak a question; the browser's built-in speech recognition (Web Speech API) turns it into text, which appears in the input box for review and editing before the user sends it (never auto-sent). Graceful fallback: when the browser does not support speech recognition, or microphone permission is denied, the button is hidden or disabled with a clear text explanation, and typing still works. Clear listening state (visible and announced to screen readers), stop on second click, keyboard accessible, readable contrast in light and dark mode; the impeccable design hook findings are triaged. No audio is sent to our server; the server and agent are unchanged. Keep it small: front-end only, one static page."
 
