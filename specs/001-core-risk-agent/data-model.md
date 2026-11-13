@@ -150,7 +150,7 @@ Period: one calendar year from 2016 to 2025 ("last year" = 2025). Percent = `100
 
 **ChatResponse** (what the API returns; built by code): `conversation_id`, `answer` (AgentAnswer), `tables` (display tables from this turn's tool calls, rendered by code), `data_sources` (deduplicated from this turn's tool calls, each with source name, period, retrieval date; filled by code, not the LLM), `tool_calls` (name and arguments, for transparency), `error` (null or a user-safe message).
 
-**Conversation**: `id` (UUID4), `turns` (last 20 messages, including tool calls and results), `updated_at`. In memory only.
+**Conversation**: `id` (UUID4), `items` (the last 20 user turns, each with the tool calls, tool results and answer that followed it; failed answer attempts are not kept), `updated_at`. In memory only.
 
 ## 8. Eval case
 

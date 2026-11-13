@@ -84,3 +84,14 @@ Each entry records what was chosen, the alternatives considered, and why.
 - **Remaining Luna failure is real per the spec:** on an ambiguous "that one" it answered for both hubs instead of asking a clarifying question. Reasonable, but the spec (US5 scenario 2) asks for clarification. Sol asks.
 - **Model choice stays gpt-6.1-sol:** Luna is faster at the median (4.6 s) but had one 65 s outlier (p95) and misses the clarification behavior. Evidence-based model choice is the interview answer to "why this model?".
 - **Known limit of the evals:** 20 hand-written cases, single run each; substring checks for refusals can miss valid phrasings (as seen). A larger, paraphrased set is the first thing to grow.
+
+## 2026-11-13 - Review findings and fixes (T059-T060)
+
+Two independent review agents ran on the finished code: a security auditor and a code reviewer.
+
+- **Security (1 confirmed, medium):** `/api/chat` had no rate limit, so a public URL could drain the OpenAI budget or tie up all threads. Fixed with an in-memory limiter (10 messages/min per client, 500/day overall) and a 16 KB body cap. Production notes kept as known limits: no auth (single-tenant demo), conversation ids act as bearer tokens, no CSP headers.
+- **The eval checker was too lenient (2 high, 1 medium).** Grounding allowed a ±0.05 tolerance and sign flips (any small invented number near a 0 passed), it drew allowed numbers from the whole conversation instead of the current turn, and `numbers_match_engine` compared the tool code with itself. Rewritten: exact displayed values only, this turn only, tables checked against the engine's own API. Rerun: still 20/20 with gpt-6.1-sol, 0 ungrounded numbers. The earlier 20/20 results were real but weaker evidence than claimed.
+- **Correctness (fixed, test-first):** a year with no data returned "0%" instead of an error, and days absent from the data were not counted as missing; the missing-data flag looked at every hazard instead of the ones shown; missing data lowered confidence but was not named in `limitations` as the data model requires (now added by code); failed answer attempts were saved to history; `clarifying_question` was not validated; two concurrent requests on one conversation could lose a turn (per-conversation lock); a snapshot/hub mismatch gave a raw KeyError (now a clear DataError).
+- **Simplified:** the server reloads scores only after `wra refresh` writes a completion marker (it could previously reload mid-refresh); duplicated schema-cleaning branches merged.
+- **Spec/contract aligned with the code:** `/api/health` returns `data_sources`; conversation history is "last 20 user turns with their tool calls".
+- **Not changed:** `Engine.rank_of` recomputes rankings per call (16 hubs; negligible), kept for readability.

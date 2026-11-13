@@ -60,7 +60,11 @@ LLM-free score breakdown (FR-013, FR-029): the overall score, each hazard score,
 
 ## GET /api/health
 
-`{ "status": "ok", "data_snapshot": { "weather_retrieved_at", "nri_version", "nri_retrieved_at" }, "model": "gpt-6.1-sol" }`.
+`{ "status": "ok", "model": "gpt-6.1-sol", "data_sources": [ { "name", "period", "retrieved_at" } ] }`. The data sources carry the NRI version and the weather window with their retrieval dates (amended during implementation to reuse the same `data_sources` shape as chat answers).
+
+## Limits on POST /api/chat
+
+`429` when a client sends more than 10 messages per minute or the service passes 500 messages per day (settings `CHAT_PER_MINUTE`, `CHAT_PER_DAY`); `413` for a request body over 16 KB. Added after the security audit, to protect the OpenAI budget once the service is public.
 
 ## GET /
 

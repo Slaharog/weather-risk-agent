@@ -95,7 +95,7 @@ src/weather_risk/
   agent/                       schemas, llm (OpenAI), tools, prompts, loop, conversations
   api/                         FastAPI app + static chat page
 evals/                         cases.yaml, run.py, results/*.json
-tests/unit, tests/smoke        119 tests: test-first for scoring and statistics; smoke tests for API and CLI
+tests/unit, tests/smoke        133 tests: test-first for scoring and statistics; smoke tests for API and CLI
 specs/001-core-risk-agent/     spec, plan, research, data model, contracts, tasks (Spec Kit)
 .specify/memory/constitution.md  project principles
 docs/                          architecture (this file), decisions log, session log

@@ -38,7 +38,7 @@ uv run wra serve              # open http://localhost:8000
 | `uv run wra serve` | API and chat page on port 8000 | For chat |
 | `uv run wra eval [--model NAME] [--case ID] [--judge]` | Runs the eval set, writes `evals/results/*.json` | Yes |
 | `uv run wra refresh [--source weather\|nri\|all]` | Fetches fresh data from the public APIs into `data/live/` | No |
-| `uv run python -m pytest` | 119 unit and smoke tests (no network, no LLM) | No |
+| `uv run python -m pytest` | 133 unit and smoke tests (no network, no LLM) | No |
 
 `python -m weather_risk <command>` is equivalent to `wra <command>`.
 
@@ -124,7 +124,8 @@ The weights and caps are judgment calls. They are documented here and in [`docs/
   - Pydantic validates the arguments again before any tool runs.
 - **Strict JSON answer.** The final answer uses OpenAI strict structured output, validated again with Pydantic, with one retry and then a clear error. The answer schema has **no numeric fields**. The required fields are `answer_type`, `narrative`, `assumptions`, `limitations`, `confidence`, and `clarifying_question`.
 - **Numbers.** Tables and data sources in the response are built by code from tool results. The model writes only the narrative, and the evals check that every number in it appears in a tool result. If a tool reports missing data, code lowers the confidence from high to medium.
-- **Follow-ups.** The server keeps conversations in memory: the last 20 turns, at most 200 conversations, lost on restart. Ambiguous references get a clarifying question.
+- **Follow-ups.** The server keeps conversations in memory: the last 20 user turns with their tool calls, at most 200 conversations, lost on restart. Ambiguous references get a clarifying question.
+- **Budget protection.** `/api/chat` allows 10 messages per minute per client and 500 per day in total (`CHAT_PER_MINUTE`, `CHAT_PER_DAY`). Request bodies are capped at 16 KB. Also set a spend limit on the OpenAI project.
 - **Model.** The default is `gpt-6.1-sol`, set with `OPENAI_MODEL`. All provider code lives in `agent/llm.py`, so the provider can be swapped by replacing that one module.
 
 ---
@@ -142,18 +143,23 @@ The weights and caps are judgment calls. They are documented here and in [`docs/
 - The expected tools were called with the expected arguments.
 - The tables show the expected hubs.
 - The answer type is right.
-- Every table equals a fresh engine call.
-- **Every number in the narrative appears in a tool result.**
+- **Table numbers equal the engine's own API.** This is checked independently of the tool formatting code.
+- **Every number in the narrative equals a value from this turn's tool results, exactly as displayed**, or comes from the user's own question. There is no rounding tolerance, so "51" for 51.2 fails.
 
 An optional LLM judge (`--judge`) scores clarity and is reported separately, never in the pass rate.
 
-| Run | Pass | Ungrounded numbers | p50 / p95 latency | Tokens (whole set) |
-|---|---|---|---|---|
-| `gpt-6.1-sol` (default), run 1 | 20/20 | 0 | 6.8 s / 15.0 s | 93k in / 4.1k out |
-| `gpt-6.1-sol`, run 2 with judge | 20/20 | 0 | 6.2 s / 15.1 s | 93k in / 4.1k out; judge clarity 4.9/5 |
-| `gpt-6-luna` (cheaper) | 18/20 at the time; 19/20 after an eval phrasing fix | 0 | 4.6 s / 64.8 s | 99k in / 3.7k out |
+| Run | Checker | Pass | Ungrounded numbers | p50 / p95 latency | Tokens (whole set) |
+|---|---|---|---|---|---|
+| **`gpt-6.1-sol` (default)** | **strict (current)** | **20/20** | **0** | 6.0 s / 13.8 s | 93k in / 4.1k out |
+| `gpt-6.1-sol`, two earlier runs | lenient (first version) | 20/20, 20/20 | 0 | about 6.5 s / 15 s | 93k in / 4.1k out; judge clarity 4.9/5 |
+| `gpt-6-luna` (cheaper) | lenient | 18/20 (19/20 after an eval phrasing fix) | 0 | 4.6 s / 64.8 s | 99k in / 3.7k out |
 
-Result files are in `evals/results/`. The Luna run shows the checks do tell models apart: it answered an ambiguous follow-up instead of asking for clarification.
+**The first checker was too lenient.** A code review found three problems:
+- It allowed a ±0.05 tolerance, which accepts invented values near any zero.
+- It drew allowed numbers from the whole conversation instead of the current turn.
+- Its table check compared the tool code with itself, so it could not fail.
+
+It was rewritten and the set was rerun; the default model still passes 20/20. The Luna run shows the checks tell models apart: it answered an ambiguous follow-up instead of asking for clarification. Result files are in `evals/results/`.
 
 ---
 
