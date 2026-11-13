@@ -27,8 +27,8 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
 
 ## Phase 1: Setup
 
-- [ ] T201 Add alert settings to `src/weather_risk/settings.py`: `alert_interval_hours: float = 0` (0 = scheduler off), `alert_threshold: float = 2.0` (must be > 0), `alert_webhook_url: SecretStr | None = None`, `alert_admin_token: SecretStr | None = None`, and a property `alerts_db -> data_dir / "alerts.sqlite"`. List them, with no real values, in `.env.example`. Run the full test suite: still green.
-- [ ] T202 [P] Create the empty package `src/weather_risk/alerts/__init__.py`.
+- [X] T201 Add alert settings to `src/weather_risk/settings.py`: `alert_interval_hours: float = 0` (0 = scheduler off), `alert_threshold: float = 2.0` (must be > 0), `alert_webhook_url: SecretStr | None = None`, `alert_admin_token: SecretStr | None = None`, and a property `alerts_db -> data_dir / "alerts.sqlite"`. List them, with no real values, in `.env.example`. Run the full test suite: still green.
+- [X] T202 [P] Create the empty package `src/weather_risk/alerts/__init__.py`.
 
 ---
 

@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -26,6 +27,18 @@ class Settings(BaseSettings):
     data_dir: Path = PROJECT_ROOT / "data" / "live"
     seed_dir: Path = PROJECT_ROOT / "data" / "seed"
     hubs_file: Path = PROJECT_ROOT / "config" / "hubs.toml"
+
+    # Risk-change alerts (spec 002). 0 hours = scheduler off: local runs and evals never fetch
+    # live data by surprise; Railway sets 24. The webhook URL and admin token are secrets: they
+    # come only from the environment and are never logged or returned (Principle VII).
+    alert_interval_hours: float = Field(0, ge=0)
+    alert_threshold: float = Field(2.0, gt=0)
+    alert_webhook_url: SecretStr | None = None
+    alert_admin_token: SecretStr | None = None
+
+    @property
+    def alerts_db(self) -> Path:
+        return self.data_dir / "alerts.sqlite"
 
 
 def get_settings() -> Settings:
