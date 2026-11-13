@@ -8,3 +8,6 @@ data/cache/
 *.sqlite
 *.db
 data/live/
+
+# Assignment brief (kept locally, not in the repo)
+ASSIGNMENT*.pdf
