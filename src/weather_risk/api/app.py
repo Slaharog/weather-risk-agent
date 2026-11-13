@@ -5,9 +5,17 @@ agent's tools use, so the numbers are identical on every path (FR-029).
 """
 
 import threading
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field, field_validator
 
+from weather_risk.agent.conversations import ConversationStore
+from weather_risk.agent.llm import LlmClient, LlmUnavailable, OpenAILlm
+from weather_risk.agent.loop import run_turn
+from weather_risk.agent.schemas import ChatResponse
+from weather_risk.agent.tools import ToolRegistry
 from weather_risk.data.store import snapshot_version
 from weather_risk.hubs import Region
 from weather_risk.scoring.engine import METRICS, OVERALL, Engine, UnknownHub, parse_metric
@@ -79,3 +87,49 @@ def hub_breakdown(hub_id: str) -> dict:
     except UnknownHub as exc:
         raise HTTPException(status_code=404, detail=exc.args[0]) from None
     return {**b.model_dump(mode="json"), "data_sources": engine.data_sources()}
+
+
+# ---------- chat (the agent) ----------
+
+MAX_MESSAGE_CHARS = 1000
+STATIC_DIR = Path(__file__).parent / "static"
+conversations = ConversationStore()
+_llm: LlmClient | None = None
+
+
+def get_llm() -> LlmClient:
+    """Created on first use; raises LlmUnavailable when no API key is configured."""
+    global _llm
+    if _llm is None:
+        _llm = OpenAILlm()
+    return _llm
+
+
+class ChatRequest(BaseModel):
+    conversation_id: str | None = None
+    message: str = Field(description=f"1 to {MAX_MESSAGE_CHARS} characters.")
+
+    @field_validator("message")
+    @classmethod
+    def _length(cls, value: str) -> str:
+        value = value.strip()
+        if not 1 <= len(value) <= MAX_MESSAGE_CHARS:
+            raise ValueError(f"message must be 1 to {MAX_MESSAGE_CHARS} characters")
+        return value
+
+
+@app.post("/api/chat", response_model=ChatResponse)
+def chat(request: ChatRequest) -> ChatResponse:
+    try:
+        llm = get_llm()
+    except LlmUnavailable as exc:
+        raise HTTPException(status_code=503, detail=f"Chat is not configured: {exc}") from None
+    convo = conversations.get_or_create(request.conversation_id)
+    response = run_turn(convo, request.message, llm, ToolRegistry(engines.get()))
+    conversations.save(convo)
+    return response
+
+
+@app.get("/", include_in_schema=False)
+def index() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index.html")

@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hub Weather Risk</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #17202a; --muted: #5b6673; --line: #dde2e8;
+    --accent: #1f5fae; --accent-soft: #e7eff9; --user: #1f5fae; --user-text: #fff;
+    --high: #1d7a46; --medium: #8a5300; --low: #b3261e; --on-accent: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12161b; --panel: #1a2027; --text: #e6ebf0; --muted: #98a3af; --line: #2b333d;
+      --accent: #6aa5ec; --accent-soft: #1d2a3a; --user: #2c5d97; --user-text: #fff;
+      --high: #5cc28a; --medium: #e0a54a; --low: #f07b72; --on-accent: #0b1a2b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+           padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  header h1 { font-size: 17px; margin: 0; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line);
+           background: var(--panel); color: var(--text); padding: 7px 12px; }
+  button:hover { border-color: var(--accent); }
+  main { max-width: 900px; margin: 0 auto; padding: 16px 16px 140px; }
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 20px; }
+  .examples button { background: var(--accent-soft); border-color: transparent; font-size: 13px; }
+  .msg { margin: 14px 0; }
+  .user { display: flex; justify-content: flex-end; }
+  .user .bubble { background: var(--user); color: var(--user-text); border-radius: 14px 14px 4px 14px;
+                  padding: 9px 14px; max-width: 75%; white-space: pre-wrap; }
+  .agent .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+                 padding: 14px 16px; }
+  .narrative { margin: 0 0 10px; white-space: pre-wrap; }
+  .error { color: var(--low); }
+  .tbl-title { font-weight: 600; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
+  .tbl-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  details { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 8px; font-size: 13.5px; }
+  summary { cursor: pointer; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+  .badge { font-size: 12px; font-weight: 600; border-radius: 999px; padding: 1px 9px; border: 1px solid; }
+  .badge.high { color: var(--high); } .badge.medium { color: var(--medium); } .badge.low { color: var(--low); }
+  details h4 { margin: 10px 0 2px; font-size: 13px; }
+  details ul { margin: 0; padding-left: 18px; }
+  .meta { color: var(--muted); font-size: 12.5px; }
+  form { position: fixed; bottom: 0; left: 0; right: 0; background: var(--panel);
+         border-top: 1px solid var(--line); padding: 12px 16px; }
+  .composer { max-width: 900px; margin: 0 auto; display: flex; gap: 8px; }
+  textarea { flex: 1; resize: none; font: inherit; color: var(--text); background: var(--bg);
+             border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 46px; }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  #send { background: var(--accent); color: var(--on-accent); border-color: var(--accent); padding: 0 18px; }
+  #send:disabled { opacity: .55; cursor: wait; }
+  .count { max-width: 900px; margin: 4px auto 0; text-align: right; color: var(--muted); font-size: 12px; }
+  .thinking { color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Hub Weather Risk</h1>
+    <p>Ask which hubs are most exposed to weather disruption. Scores come from a deterministic engine; the AI explains them.</p>
+  </div>
+  <button id="new" type="button" title="Start a new conversation">New conversation</button>
+</header>
+
+<main id="log" aria-live="polite">
+  <div class="examples" id="examples">
+    <button type="button">Which hubs in the Midwest are most exposed to winter disruption?</button>
+    <button type="button">Compare Miami and Houston in terms of hurricane and flood exposure.</button>
+    <button type="button">What percentage of days in Denver last year had snowfall?</button>
+    <button type="button">Why is the Dallas hub's weather disruption risk high?</button>
+  </div>
+</main>
+
+<form id="form">
+  <div class="composer">
+    <textarea id="input" maxlength="1000" rows="1" placeholder="Ask about a hub, a region, or a hazard…" aria-label="Your question"></textarea>
+    <button id="send" type="submit">Send</button>
+  </div>
+  <div class="count"><span id="count">0</span>/1000</div>
+</form>
+
+<script>
+const log = document.getElementById("log");
+const form = document.getElementById("form");
+const input = document.getElementById("input");
+const send = document.getElementById("send");
+let conversationId = null;
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  for (const c of children) node.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return node;
+}
+
+function list(items) {
+  return items.length ? el("ul", {}, ...items.map(i => el("li", {}, i))) : el("p", { class: "meta" }, "None.");
+}
+
+function renderTable(t) {
+  const head = el("tr", {}, ...t.columns.map(c => el("th", {}, c)));
+  const rows = t.rows.map(r => el("tr", {}, ...r.map(v =>
+    el("td", typeof v === "number" ? { class: "num" } : {}, v))));
+  return el("div", {}, el("div", { class: "tbl-title" }, t.title),
+            el("div", { class: "tbl-wrap" }, el("table", {}, el("thead", {}, head), el("tbody", {}, ...rows))));
+}
+
+function renderAnswer(res) {
+  const card = el("div", { class: "card" });
+  if (res.error || !res.answer) {
+    card.append(el("p", { class: "narrative error" }, res.error || "Something went wrong."));
+    return card;
+  }
+  const a = res.answer;
+  card.append(el("p", { class: "narrative" }, a.narrative));
+  if (a.clarifying_question) card.append(el("p", { class: "narrative" }, a.clarifying_question));
+  res.tables.forEach(t => card.append(renderTable(t)));
+
+  const level = a.confidence.level;
+  const about = el("details", {},
+    el("summary", {}, "About this answer", el("span", { class: `badge ${level}` }, `${level} confidence`)),
+    el("p", { class: "meta" }, a.confidence.reason),
+    el("h4", {}, "Data sources"),
+    list(res.data_sources.map(s => `${s.name}: ${s.period} (retrieved ${s.retrieved_at})`)),
+    el("h4", {}, "Assumptions"), list(a.assumptions),
+    el("h4", {}, "Limitations"), list(a.limitations),
+    el("h4", {}, "Tools used"),
+    list(res.tool_calls.map(c => `${c.tool}(${JSON.stringify(c.arguments)})`)));
+  card.append(about);
+  return card;
+}
+
+function addMessage(role, content) {
+  const wrap = el("div", { class: `msg ${role}` }, content);
+  log.append(wrap);
+  wrap.scrollIntoView({ behavior: "smooth", block: "end" });
+  return wrap;
+}
+
+async function ask(question) {
+  question = question.trim();
+  if (!question) return;  // the page never sends empty input
+  document.getElementById("examples")?.remove();
+  addMessage("user", el("div", { class: "bubble" }, question));
+  const pending = addMessage("agent", el("div", { class: "card thinking" }, "Checking the data…"));
+  send.disabled = true;
+  try {
+    const r = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversation_id: conversationId, message: question }),
+    });
+    const body = await r.json();
+    if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : "Request rejected.");
+    conversationId = body.conversation_id;
+    pending.replaceChildren(renderAnswer(body));
+  } catch (e) {
+    pending.replaceChildren(renderAnswer({ error: e.message }));
+  } finally {
+    send.disabled = false;
+    input.focus();
+  }
+}
+
+form.addEventListener("submit", e => { e.preventDefault(); const q = input.value; input.value = ""; updateCount(); ask(q); });
+input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
+const updateCount = () => document.getElementById("count").textContent = input.value.length;
+input.addEventListener("input", updateCount);
+document.getElementById("examples").addEventListener("click", e => { if (e.target.tagName === "BUTTON") ask(e.target.textContent); });
+document.getElementById("new").addEventListener("click", () => { conversationId = null; log.replaceChildren(); input.focus(); });
+</script>
+</body>
+</html>

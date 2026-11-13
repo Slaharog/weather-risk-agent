@@ -162,5 +162,17 @@ def stat(
     _print_sources(engine)
 
 
+@app.command()
+def serve(
+    port: int = typer.Option(8000, envvar="PORT", help="Port (Railway sets PORT)."),
+    host: str = typer.Option("127.0.0.1", envvar="HOST", help="Use 0.0.0.0 in a container."),
+) -> None:
+    """Start the API and the chat page."""
+    import uvicorn
+
+    typer.echo(f"Chat page: http://{'localhost' if host in ('127.0.0.1', '0.0.0.0') else host}:{port}")
+    uvicorn.run("weather_risk.api.app:app", host=host, port=port)
+
+
 if __name__ == "__main__":
     app()
