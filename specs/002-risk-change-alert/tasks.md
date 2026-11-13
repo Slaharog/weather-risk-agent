@@ -45,7 +45,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
     - the output is sorted by `(hub_id, metric)`;
     - `threshold <= 0` raises `ValueError`.
   - `simulate_previous(current)`: `dallas.heat - 7.5` and `houston.hurricane + 5.0`, "rounded to 1 decimal, clamped to 0-100"; a missing hub is skipped; the input is not mutated; with the default threshold it gives exactly 2 changes.
-- [ ] T205 Implement `src/weather_risk/alerts/detect.py` (`Change` model, `watched_scores`, `detect_changes`, `simulate_previous`, `DEMO_SHIFTS`) until T204 passes.
+- [X] T205 Implement `src/weather_risk/alerts/detect.py` (`Change` model, `watched_scores`, `detect_changes`, `simulate_previous`, `DEMO_SHIFTS`) until T204 passes.
 - [ ] T206 [P] TDD: write `tests/unit/test_alert_history.py` (failing first), using `tmp_path` and covering:
   - the schema is created on first open;
   - `last_real_scores()` is `{}` with no checks;
