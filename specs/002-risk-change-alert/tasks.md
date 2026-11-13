@@ -46,7 +46,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
     - `threshold <= 0` raises `ValueError`.
   - `simulate_previous(current)`: `dallas.heat - 7.5` and `houston.hurricane + 5.0`, "rounded to 1 decimal, clamped to 0-100"; a missing hub is skipped; the input is not mutated; with the default threshold it gives exactly 2 changes.
 - [X] T205 Implement `src/weather_risk/alerts/detect.py` (`Change` model, `watched_scores`, `detect_changes`, `simulate_previous`, `DEMO_SHIFTS`) until T204 passes.
-- [ ] T206 [P] TDD: write `tests/unit/test_alert_history.py` (failing first), using `tmp_path` and covering:
+- [X] T206 [P] TDD: write `tests/unit/test_alert_history.py` (failing first), using `tmp_path` and covering:
   - the schema is created on first open;
   - `last_real_scores()` is `{}` with no checks;
   - `record_check(...)` writes the check, its score records and its alerts in one transaction;
@@ -57,7 +57,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
   - `set_delivery(alert_id, status, error)` works, with status in "`pending` (only while sending), `delivered`, `failed`, or `not_configured`";
   - retention keeps score records of the newest 30 real checks only;
   - data survives closing and reopening the file (SC-203);
-  - `next_due(now, interval_hours)` is True with no real check, and False until `last real started_at + interval`.
+  - `is_due(now, interval_hours)` is True with no real check, and False until `last real started_at + interval`.
 - [ ] T207 Implement `src/weather_risk/alerts/history.py` with stdlib `sqlite3` and raw SQL, using the tables from data-model.md §3 (`checks`, `score_records`, `alerts`), `CREATE TABLE IF NOT EXISTS`, and a new connection per operation. Make T206 pass.
 
 **Checkpoint**: detection and history are proven by tests. Nothing is wired yet, and the app is unchanged.
@@ -85,7 +85,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
   - an unreachable webhook still completes the check, with `failed` recorded (SC-204);
   - a concurrent call raises `CheckBusy`.
 - [ ] T212 [US1] Add `wra alerts check` and `wra alerts list [--limit N]` to `src/weather_risk/cli.py` (a Typer sub-app), with output and exit codes as in contracts/cli.md. Add a smoke test in `tests/smoke/test_cli_alerts.py` with the fake fetch.
-- [ ] T213 [US1] Implement `src/weather_risk/alerts/scheduler.py`: `async def run_scheduler(settings, poll_seconds=600)`, which loops forever. On each tick, if `next_due(...)` is true, it runs `await asyncio.to_thread(run_check, "scheduled", ...)`. It catches and logs `CheckBusy` and any exception, so the loop never dies. Wire it into a FastAPI `lifespan` in `src/weather_risk/api/app.py`, started only when `alert_interval_hours > 0` and cancelled on shutdown. Add a smoke test in `tests/smoke/test_scheduler.py` (a short poll, a monkeypatched `run_check`, and a check that it runs once when due and not when not due).
+- [ ] T213 [US1] Implement `src/weather_risk/alerts/scheduler.py`: `async def run_scheduler(settings, poll_seconds=600)`, which loops forever. On each tick, if `is_due(...)` is true, it runs `await asyncio.to_thread(run_check, "scheduled", ...)`. It catches and logs `CheckBusy` and any exception, so the loop never dies. Wire it into a FastAPI `lifespan` in `src/weather_risk/api/app.py`, started only when `alert_interval_hours > 0` and cancelled on shutdown. Add a smoke test in `tests/smoke/test_scheduler.py` (a short poll, a monkeypatched `run_check`, and a check that it runs once when due and not when not due).
 
 **Checkpoint**: `wra alerts check` works locally; the first run is a baseline.
 
