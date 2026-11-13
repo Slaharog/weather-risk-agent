@@ -102,7 +102,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
   - It uses `textContent` only, has an empty state, and shows an error state if the fetch fails.
   - It has no trigger controls.
   - Add `GET /alerts` (FileResponse), and one "Alerts" link in the header of `src/weather_risk/api/static/index.html` (no other change). Smoke test: `/alerts` returns 200 and contains "Recent alerts"; `/` contains `href="/alerts"`.
-- [ ] T216 [US2] Run the impeccable audit on `alerts.html` and the changed header (keyboard focus, contrast in both modes, the demo label not conveyed by color alone). Fix the material findings, and record the triage in the task's commit message.
+- [X] T216 [US2] Run the impeccable audit on `alerts.html` and the changed header (keyboard focus, contrast in both modes, the demo label not conveyed by color alone). Fix the material findings, and record the triage in the task's commit message.
 
 ---
 

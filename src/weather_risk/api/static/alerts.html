@@ -88,6 +88,8 @@
 // Every value is rendered with textContent, never as HTML.
 const $ = (id) => document.getElementById(id);
 
+const utc = (iso) => iso.replace("T", " ").replace("Z", "");  // "2026-11-13 14:57:27"
+
 function cell(text, cls) {
   const td = document.createElement("td");
   td.textContent = text;
@@ -107,7 +109,7 @@ function render(data) {
   if (!c) {
     term(dl, "Status", "No check has run yet.");
   } else {
-    term(dl, "When", `${c.started_at} (${c.kind})`);
+    term(dl, "When (UTC)", `${utc(c.started_at)} (${c.kind})`);
     term(dl, "Result", `${c.status}, ${c.hubs_checked} hubs, ${c.alerts_raised} alerts` + (c.baseline ? ", baseline recorded" : ""));
     if (c.fetch_failures.length) term(dl, "Fetch failures", c.fetch_failures.join(", ") + " (previous data kept)");
   }
@@ -119,7 +121,7 @@ function render(data) {
   for (const a of data.alerts) {
     const tr = document.createElement("tr");
     const change = (a.change > 0 ? "+" : "") + a.change.toFixed(1);
-    tr.append(cell(a.detected_at.replace("T", " ").replace("Z", "")), cell(a.hub_name), cell(a.metric),
+    tr.append(cell(utc(a.detected_at)), cell(a.hub_name), cell(a.metric),
               cell(a.old_value.toFixed(1), "num"), cell(a.new_value.toFixed(1), "num"), cell(change, "num"));
     const type = document.createElement("td");
     if (a.is_demo) {
