@@ -6,7 +6,8 @@ from weather_risk.data.models import DailyWeather
 from weather_risk.scoring.indicators import (
     OBSERVED_INDICATORS,
     annual_rate,
-    fema_percentile,
+    fema_ratio,
+    national_p99,
     observed_score,
     qualifies,
 )
@@ -17,18 +18,29 @@ def _day(i=0, snow=0.0, rain=0.0, tmax=20.0, tmin=10.0, gust=20.0):
                         precipitation_mm=rain, tmax_c=tmax, tmin_c=tmin, gust_max_kmh=gust)
 
 
-# ---------- FEMA frequency percentile (data-model 3a) ----------
+# ---------- FEMA frequency ratio to the national 99th-percentile county (data-model 3a) ----------
 
-def test_percentile_is_zero_when_hazard_absent_or_not_applicable():
-    population = [None, 0.0, 1.0, 2.0, 3.0]
-    assert fema_percentile(None, population) == 0
-    assert fema_percentile(0.0, population) == 0
+POPULATION = [None] + [float(i) for i in range(101)]  # null, 0, 1, ..., 100
 
 
-def test_percentile_counts_counties_at_or_below_with_null_as_zero():
-    population = [None, 0.0, 1.0, 2.0, 3.0]
-    assert fema_percentile(2.0, population) == pytest.approx(80.0)  # None, 0, 1, 2 are <= 2
-    assert fema_percentile(3.0, population) == pytest.approx(100.0)
+def test_national_p99_counts_null_as_zero():
+    # sorted with null as 0: [0, 0, 1, ..., 100]; index floor(0.99 * 101) = 99 -> value 98
+    assert national_p99(POPULATION) == 98.0
+
+
+def test_ratio_is_zero_when_hazard_absent_or_not_applicable():
+    assert fema_ratio(None, p99=98.0) == 0
+    assert fema_ratio(0.0, p99=98.0) == 0
+
+
+def test_ratio_is_linear_up_to_the_p99_county_and_capped_at_100():
+    assert fema_ratio(49.0, p99=98.0) == pytest.approx(50.0)
+    assert fema_ratio(98.0, p99=98.0) == pytest.approx(100.0)
+    assert fema_ratio(150.0, p99=98.0) == 100
+
+
+def test_ratio_is_zero_when_no_county_has_the_hazard():
+    assert fema_ratio(1.0, p99=0.0) == 0
 
 
 # ---------- Observed weather indicators (data-model 3b) ----------

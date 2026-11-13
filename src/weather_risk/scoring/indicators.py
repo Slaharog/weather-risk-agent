@@ -3,8 +3,8 @@
 Two kinds, both on fixed national yardsticks so a hub's score never depends on which
 other hubs are in the list:
 
-1. FEMA frequency percentile: how the hub county's expected events per year compare
-   with all ~3,232 US counties.
+1. FEMA frequency ratio: the hub county's expected events per year as a share of the
+   99th-percentile US county (all ~3,232 counties), capped at 100.
 2. Observed weather indicator: qualifying days per year at the hub (Open-Meteo, 2016-2025),
    mapped onto 0-100 with a fixed cap. The thresholds and caps are documented judgment calls.
 """
@@ -47,16 +47,28 @@ OBSERVED_INDICATORS: dict[str, ObservedIndicator] = {
 _OPS = {">=": ge, "<=": le}
 
 
-def fema_percentile(value: float | None, population: Sequence[float | None]) -> float:
-    """National percentile of a county's annualized frequency.
+def national_p99(population: Sequence[float | None]) -> float:
+    """Annualized frequency of the 99th-percentile US county (null counted as 0).
 
-    0 when FEMA rates the hazard as absent (0) or not applicable (null). Otherwise the share
-    of all counties whose frequency is at or below this one, with null counted as 0.
+    This is the fixed national yardstick for a FEMA hazard: a county this exposed or more
+    scores 100. Using p99 instead of the maximum keeps one extreme county from squashing
+    every other score.
     """
-    if not value:
+    values = sorted(v or 0.0 for v in population)
+    return values[int(0.99 * (len(values) - 1))]
+
+
+def fema_ratio(value: float | None, p99: float) -> float:
+    """FEMA indicator: 100 x county frequency / p99 frequency, capped at 100.
+
+    Linear, so magnitude is kept: a county with 1/26 of Miami's hurricane frequency gets
+    about 1/26 of its score. (A percentile rank was tried first and rejected: it made rare
+    hazards look large; see docs/decisions.md, 2026-11-13.)
+    0 when FEMA rates the hazard as absent (0) or not applicable (null).
+    """
+    if not value or p99 <= 0:
         return 0.0
-    at_or_below = sum(1 for v in population if (v or 0.0) <= value)
-    return 100.0 * at_or_below / len(population)
+    return min(100.0, 100.0 * value / p99)
 
 
 def qualifies(day: DailyWeather, indicator: ObservedIndicator) -> bool | None:

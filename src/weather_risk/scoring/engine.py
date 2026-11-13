@@ -15,7 +15,8 @@ from weather_risk.hubs import Hub
 from weather_risk.scoring.indicators import (
     OBSERVED_INDICATORS,
     annual_rate,
-    fema_percentile,
+    fema_ratio,
+    national_p99,
     observed_score,
 )
 
@@ -84,12 +85,14 @@ class OverallScore(BaseModel):
 
 def _fema(code: str, county: NriCounty, population: Sequence[NriCounty]) -> IndicatorValue:
     value = county.afreq.get(code)
+    p99 = national_p99([c.afreq.get(code) for c in population])
     return IndicatorValue(
-        score=fema_percentile(value, [c.afreq.get(code) for c in population]),
+        score=fema_ratio(value, p99),
         raw_value=value or 0.0,
         raw_unit="events/yr",
         source=NRI_SOURCE,
-        label=f"FEMA {NRI_LABELS[code]} frequency (national percentile)",
+        label=f"FEMA {NRI_LABELS[code]} events per year (100 = 99th-percentile US county, "
+              f"{p99:.3g}/yr)",
     )
 
 

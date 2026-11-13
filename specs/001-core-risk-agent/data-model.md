@@ -53,14 +53,15 @@ All entities are Pydantic models held in memory. Raw source data is stored as JS
 
 Every indicator yields a value from 0 to 100 and keeps its **raw value** so explanations can cite it.
 
-### 3a. FEMA frequency percentile
+### 3a. FEMA frequency ratio (amended 2026-11-13; was a percentile rank)
 
 For NRI hazard code `h` and hub county `c`:
 
-- If `afreq[c][h]` is `null` or `0`: indicator = **0** (FEMA rates the hazard as absent or not applicable).
-- Otherwise: indicator = `100 × (number of counties with afreq ≤ afreq[c][h]) / (number of counties)`, where null counts as 0.
+- `p99[h]` = the annualized frequency of the 99th-percentile US county (all ~3,232 counties, null counted as 0; sorted, index `floor(0.99 × (N − 1))`).
+- If `afreq[c][h]` is `null` or `0`, or `p99[h]` is 0: indicator = **0** (FEMA rates the hazard as absent or not applicable).
+- Otherwise: indicator = `min(100, 100 × afreq[c][h] / p99[h])`.
 
-Meaning: "this county has as many or more of these events per year as X% of US counties." Raw value: events per year.
+Meaning: "this county has X% as many of these events per year as a top-1% US county." Raw value: events per year. This keeps magnitude: the first version used a percentile rank, which gave Dallas a hurricane score of 49.5 for a frequency 1/26 of Miami's (see `docs/decisions.md`).
 
 ### 3b. Observed weather indicator
 

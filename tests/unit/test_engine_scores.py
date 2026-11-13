@@ -62,11 +62,12 @@ def _county(fips, **afreq):
 
 def test_flood_uses_the_worse_of_inland_and_coastal_flooding():
     hub_county = _county("A", IFLD=1.0, CFLD=3.0)
-    population = [hub_county, _county("B", IFLD=2.0, CFLD=None), _county("C"), _county("D")]
+    others = [_county(f"X{i}", IFLD=4.0, CFLD=4.0) for i in range(99)]
+    population = [hub_county, *others]  # p99 = 4.0 for both flood types
     days = [DailyWeather(date=date(2020, 1, 1) + timedelta(days=i), snowfall_cm=0,
                          precipitation_mm=0, tmax_c=20, tmin_c=10, gust_max_kmh=10)
             for i in range(366)]
     values = indicator_values(hub_county, population, days)
-    # IFLD 1.0 -> counties <= 1.0: A, C(0), D(0) = 75; CFLD 3.0 -> all 4 = 100
-    assert values["fema_flood"].score == pytest.approx(100.0)
+    # inland 1.0 / 4.0 = 25; coastal 3.0 / 4.0 = 75 -> coastal wins
+    assert values["fema_flood"].score == pytest.approx(75.0)
     assert "coastal" in values["fema_flood"].label.lower()

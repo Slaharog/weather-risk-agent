@@ -27,7 +27,7 @@ Every fact below was checked live on 2026-11-13 (API calls or official docs), no
 ## R3. Absolute scoring method
 
 - **Decision**: every hazard score is a weighted mix of two kinds of 0-100 indicators, both on fixed national yardsticks:
-  1. **FEMA frequency percentile**: the hub county's national percentile of `_AFREQ` among all 3,232 counties (share of counties with a strictly lower value, plus half the ties). Computed from the full national table in the snapshot, so it does not depend on our hub list.
+  1. **FEMA frequency ratio** (amended during implementation): the hub county's `_AFREQ` divided by that of the 99th-percentile US county, capped at 100. Computed from the full national table in the snapshot, so it does not depend on our hub list. A national percentile rank was planned first, but on real data it inflated rare hazards (about half of counties have zero hurricane frequency, so any non-zero value ranked near the 50th percentile).
   2. **Observed weather indicator**: an annual average from the 10-year Open-Meteo record, mapped linearly onto 0-100 between a fixed floor (0) and a fixed cap (100), clamped.
 - **Rationale**: both are independent of the hub list (Q2 decision), both are reproducible from the snapshot, and the result is a transparent weighted sum (Principle I). FEMA history covers what reanalysis cannot see (hurricanes, floods, tornadoes); Open-Meteo adds direct local evidence the analyst can check ("Denver had snow on X% of days").
 - **The caps are judgment calls**, documented in `data-model.md` and in the README, and listed as an assumption in answers.

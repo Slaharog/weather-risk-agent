@@ -67,3 +67,11 @@ Each entry records what was chosen, the alternatives considered, and why.
 - Spec: a non-hub city now gets "hubs in the same region" instead of "the nearest hub" (no geocoding, so "nearest" would be an LLM guess).
 - Refresh recomputes and the server reloads when the manifest changes; code lowers confidence when data is missing.
 - Constitution v1.1.1 (PATCH): eval sampling wording covers reasoning models.
+
+## 2026-11-13 - FEMA indicator: percentile rank replaced by ratio to the national p99 county
+
+- **What happened:** the blind plausibility tests passed, but reviewing the real scores showed inland hubs with large hurricane scores (Dallas, Phoenix, St. Louis about 49; Chicago 39). FEMA rates Dallas at 0.0115 hurricane events/yr versus Miami at 0.305 (about 26x). A percentile rank keeps only order: about 27% of counties have zero hurricane frequency, so any non-zero value jumps to the middle of the distribution. Flood and severe-storm scores were compressed the same way.
+- **Chosen (user decision):** score = min(100, 100 x county frequency / frequency of the 99th-percentile US county). Linear like the weather-day indicators, still an absolute national yardstick. Hurricane now: Miami 99.9, Houston 60.1, Newark 35.0, Dallas 3.8.
+- **Alternatives:** keep percentile rank (simple wording, misleading magnitudes); percentile among exposed counties only (Dallas 30.8, still loses magnitude).
+- **Not a test-fitting change:** all five plausibility tests passed both before and after; the change fixes magnitude, which those tests do not measure.
+- **Effect on overall ranking:** Houston 48.4, Dallas 46.0, Miami 41.4 lead; Dallas no longer gets an inflated hurricane component.
