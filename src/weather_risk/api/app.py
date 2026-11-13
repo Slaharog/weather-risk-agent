@@ -97,6 +97,14 @@ MAX_CHAT_BODY_BYTES = 16_384  # far above a 1,000-character message plus a conve
 STATIC_DIR = Path(__file__).parent / "static"
 conversations = ConversationStore()
 limiter = RateLimiter(get_settings().chat_per_minute, get_settings().chat_per_day)
+TRUSTED_IP_HEADER = get_settings().trusted_ip_header
+
+
+def client_ip(http: Request) -> str:
+    """The client the rate limit applies to: the proxy's header if one is trusted, else the socket."""
+    if TRUSTED_IP_HEADER and (forwarded := http.headers.get(TRUSTED_IP_HEADER)):
+        return forwarded.strip()
+    return http.client.host if http.client else "unknown"
 
 
 @app.middleware("http")
@@ -133,8 +141,7 @@ class ChatRequest(BaseModel):
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(request: ChatRequest, http: Request) -> ChatResponse:
-    client = http.client.host if http.client else "unknown"
-    if not limiter.allow(client):
+    if not limiter.allow(client_ip(http)):
         raise HTTPException(status_code=429, detail="Too many questions right now. Please wait a minute.")
     try:
         llm = get_llm()

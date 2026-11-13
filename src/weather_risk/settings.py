@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     # Budget protection for /api/chat once public (per client per minute, all clients per day).
     chat_per_minute: int = 10
     chat_per_day: int = 500
+    # Header a trusted reverse proxy uses for the client IP (Railway: X-Real-IP). Unset locally,
+    # because without a proxy in front, any client could set the header to dodge the limit.
+    trusted_ip_header: str | None = None
 
     # Refreshed data goes to data_dir; the committed snapshot lives in seed_dir.
     data_dir: Path = PROJECT_ROOT / "data" / "live"

@@ -71,3 +71,26 @@ def test_rate_limit_returns_429(fake_llm, monkeypatch):
     monkeypatch.setattr(app_module, "limiter", RateLimiter(per_minute=1, per_day=100))
     assert client.post("/api/chat", json={"message": "hi"}).status_code == 200
     assert client.post("/api/chat", json={"message": "hi"}).status_code == 429
+
+
+def test_trusted_ip_header_gives_each_client_its_own_limit(fake_llm, monkeypatch):
+    """Behind Railway's proxy every request comes from the proxy; X-Real-IP names the client."""
+    from weather_risk.api.limits import RateLimiter
+
+    monkeypatch.setattr(app_module, "limiter", RateLimiter(per_minute=1, per_day=100))
+    monkeypatch.setattr(app_module, "TRUSTED_IP_HEADER", "X-Real-IP")
+    a = client.post("/api/chat", json={"message": "hi"}, headers={"X-Real-IP": "203.0.113.1"})
+    b = client.post("/api/chat", json={"message": "hi"}, headers={"X-Real-IP": "203.0.113.2"})
+    again = client.post("/api/chat", json={"message": "hi"}, headers={"X-Real-IP": "203.0.113.1"})
+    assert (a.status_code, b.status_code, again.status_code) == (200, 200, 429)
+
+
+def test_ip_header_is_ignored_unless_configured(fake_llm, monkeypatch):
+    """Without a trusted proxy, a client could set X-Real-IP itself to dodge the limit."""
+    from weather_risk.api.limits import RateLimiter
+
+    monkeypatch.setattr(app_module, "limiter", RateLimiter(per_minute=1, per_day=100))
+    monkeypatch.setattr(app_module, "TRUSTED_IP_HEADER", None)
+    a = client.post("/api/chat", json={"message": "hi"}, headers={"X-Real-IP": "203.0.113.1"})
+    b = client.post("/api/chat", json={"message": "hi"}, headers={"X-Real-IP": "203.0.113.2"})
+    assert (a.status_code, b.status_code) == (200, 429)

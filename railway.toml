@@ -1,0 +1,11 @@
+# Railway config as code. Variables (OPENAI_API_KEY, DATA_DIR, TRUSTED_IP_HEADER) are set in
+# the Railway dashboard, never here.
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/api/health"
+healthcheckTimeout = 60
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

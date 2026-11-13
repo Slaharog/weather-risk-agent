@@ -1,0 +1,19 @@
+# Secrets and local state never go into the image.
+.env
+.venv/
+data/live/
+*.sqlite
+*.db
+
+# Not needed at runtime.
+.git/
+.claude/
+.specify/
+.impeccable/
+.pytest_cache/
+.ruff_cache/
+**/__pycache__/
+docs/
+specs/
+tests/
+ASSIGNMENT*.pdf
