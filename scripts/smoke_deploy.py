@@ -4,6 +4,7 @@ Usage: python scripts/smoke_deploy.py https://<your-app>.up.railway.app
 Prints a short summary and exits non-zero on the first failure.
 """
 
+import ssl
 import sys
 
 import httpx
@@ -11,7 +12,7 @@ import httpx
 
 def main(base: str) -> None:
     base = base.rstrip("/")
-    with httpx.Client(timeout=90) as http:
+    with httpx.Client(timeout=90, verify=ssl.create_default_context()) as http:
         health = http.get(f"{base}/api/health")
         health.raise_for_status()
         print("health  ", health.status_code, health.json())
