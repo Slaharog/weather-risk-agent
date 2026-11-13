@@ -108,7 +108,7 @@ Single project: `src/weather_risk/`, `tests/`, `scripts/` at the repository root
 
 ## Phase 5: User Story 3 - Trigger a check on demand (P2)
 
-- [ ] T217 [US3] Add `POST /api/alerts/check` in `src/weather_risk/api/app.py`:
+- [X] T217 [US3] Add `POST /api/alerts/check` in `src/weather_risk/api/app.py`:
   - a bearer token compared with `hmac.compare_digest`;
   - 403 if no token is configured or the token is wrong, with the same body either way;
   - 409 on `CheckBusy`;

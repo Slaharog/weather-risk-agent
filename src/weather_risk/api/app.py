@@ -5,6 +5,7 @@ agent's tools use, so the numbers are identical on every path (FR-029).
 """
 
 import asyncio
+import hmac
 import threading
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
@@ -18,8 +19,10 @@ from weather_risk.agent.llm import LlmClient, LlmUnavailable, OpenAILlm
 from weather_risk.agent.loop import run_turn
 from weather_risk.agent.schemas import ChatResponse
 from weather_risk.agent.tools import ToolRegistry
+from weather_risk.alerts import service as alert_service
 from weather_risk.alerts.history import History
 from weather_risk.alerts.scheduler import run_scheduler
+from weather_risk.alerts.service import CheckSummary
 from weather_risk.api.limits import RateLimiter
 from weather_risk.data.store import snapshot_version
 from weather_risk.hubs import Region
@@ -198,3 +201,29 @@ def alerts(limit: int = Query(50, ge=1, le=50)) -> dict:
         "alerts": [{**a, "hub_name": hubs[a["hub_id"]].name if a["hub_id"] in hubs else a["hub_id"]}
                    for a in history.list_alerts(limit)],
     }
+
+
+# Triggering is the only way to make the service fetch from the public APIs on demand, so it needs
+# the operator token and has its own small rate limit (research.md §6, FR-215, FR-219).
+trigger_limiter = RateLimiter(per_minute=2, per_day=50)
+
+
+def _authorize_trigger(http: Request) -> None:
+    token = get_settings().alert_admin_token
+    supplied = http.headers.get("authorization", "")
+    expected = f"Bearer {token.get_secret_value()}" if token else None
+    # Same 403 for "no token configured" and "wrong token"; constant-time comparison.
+    if expected is None or not hmac.compare_digest(supplied.encode(), expected.encode()):
+        raise HTTPException(status_code=403, detail="Triggering checks is not allowed.")
+    if not trigger_limiter.allow(client_ip(http)):
+        raise HTTPException(status_code=429, detail="Too many triggered checks. Please wait a minute.")
+
+
+@app.post("/api/alerts/check", response_model=CheckSummary)
+def trigger_check(http: Request) -> CheckSummary:
+    """Run a real check now (fetches live data; about a minute). Operator token required."""
+    _authorize_trigger(http)
+    try:
+        return alert_service.run_check("manual")
+    except alert_service.CheckBusy:
+        raise HTTPException(status_code=409, detail="A check is already running.") from None
