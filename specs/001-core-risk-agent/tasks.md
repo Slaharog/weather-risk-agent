@@ -29,11 +29,11 @@ Single project: `src/weather_risk/`, `tests/`, `evals/`, `config/`, `data/` at r
 
 **Purpose**: Project initialization
 
-- [ ] T001 Create `pyproject.toml` for package `weather_risk` (src layout, `requires-python = ">=3.12"`) with dependencies `fastapi`, `uvicorn[standard]`, `openai`, `pydantic>=2`, `pydantic-settings`, `httpx`, `typer`, `pyyaml`; dev group `pytest`, `ruff`; script entry point `wra = "weather_risk.cli:app"`; run `uv sync` to create `uv.lock`
-- [ ] T002 [P] Create the package skeleton with empty `__init__.py` files: `src/weather_risk/__init__.py`, `src/weather_risk/data/__init__.py`, `src/weather_risk/scoring/__init__.py`, `src/weather_risk/agent/__init__.py`, `src/weather_risk/api/__init__.py`, plus directories `tests/unit/`, `tests/smoke/`, `tests/fixtures/`, `evals/results/`
-- [ ] T003 [P] Configure ruff (line length 100) and pytest (`testpaths = ["tests"]`, marker `plausibility`) in `pyproject.toml`
-- [ ] T004 [P] Implement `src/weather_risk/settings.py` with pydantic-settings: `OPENAI_API_KEY` (optional; required only for chat and evals), `OPENAI_MODEL` default `"gpt-6.1-sol"`, `OPENAI_REASONING_EFFORT` default `"low"`, `DATA_DIR` default `"data/live"`, `SEED_DIR` default `"data/seed"`; create `.env.example` listing these with no real values
-- [ ] T005 [P] Add `data/live/` to `.gitignore` (the seed in `data/seed/` stays committed; `.env` is already ignored)
+- [X] T001 Create `pyproject.toml` for package `weather_risk` (src layout, `requires-python = ">=3.12"`) with dependencies `fastapi`, `uvicorn[standard]`, `openai`, `pydantic>=2`, `pydantic-settings`, `httpx`, `typer`, `pyyaml`; dev group `pytest`, `ruff`; script entry point `wra = "weather_risk.cli:app"`; run `uv sync` to create `uv.lock`
+- [X] T002 [P] Create the package skeleton with empty `__init__.py` files: `src/weather_risk/__init__.py`, `src/weather_risk/data/__init__.py`, `src/weather_risk/scoring/__init__.py`, `src/weather_risk/agent/__init__.py`, `src/weather_risk/api/__init__.py`, plus directories `tests/unit/`, `tests/smoke/`, `tests/fixtures/`, `evals/results/`
+- [X] T003 [P] Configure ruff (line length 100) and pytest (`testpaths = ["tests"]`, marker `plausibility`) in `pyproject.toml`
+- [X] T004 [P] Implement `src/weather_risk/settings.py` with pydantic-settings: `OPENAI_API_KEY` (optional; required only for chat and evals), `OPENAI_MODEL` default `"gpt-6.1-sol"`, `OPENAI_REASONING_EFFORT` default `"low"`, `DATA_DIR` default `"data/live"`, `SEED_DIR` default `"data/seed"`; create `.env.example` listing these with no real values
+- [X] T005 [P] Add `data/live/` to `.gitignore` (the seed in `data/seed/` stays committed; `.env` is already ignored)
 
 ---
 
