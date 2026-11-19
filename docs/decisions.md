@@ -160,3 +160,9 @@ Two read-only review agents ran on the finished alert code: a security reviewer 
 - **Webhook:** the user confirmed that both `[DEMO]` messages arrived on webhook.site.
 - **Persistence (SC-203):** after the next push redeployed the service, `GET /api/alerts` still showed check #2 and its 2 alerts. No duplicate scheduled check ran, because the "due" decision is read from SQLite rather than from process memory.
 - **Voice:** the user tried it with a real microphone in Chrome on the https deployment, and it works. This completes the one check the scripted fake-recognizer test could not cover.
+
+## 2026-11-19 - Fix: `wra eval` failed through the launcher
+
+- **What broke:** `uv run wra eval` failed with `ModuleNotFoundError: No module named 'evals'`. The `wra.exe` launcher could not import the top-level `evals` package because the wheel build list in `pyproject.toml` only included `src/weather_risk`.
+- **Why it went unnoticed:** the evals were always run with `uv run python -m weather_risk eval`, and `python -m` adds the current folder to the import path, so `evals` was found there. Pytest also adds the repo root through `pythonpath`. The bug existed on both development computers.
+- **Fix:** `packages = ["src/weather_risk", "evals"]` under `[tool.hatch.build.targets.wheel]`, then `uv sync`. Verified: `uv run wra eval --case example-midwest-winter` passes, the `python -m` form still passes, 218 tests pass and `wra rank` is unchanged. The README already documents `uv run wra eval` as the main command.
